@@ -18,6 +18,7 @@ Cách dùng:
 """
 import argparse
 import datetime
+import http.cookiejar
 import json
 import os
 import re
@@ -53,27 +54,53 @@ ALIAS = {"ScoreboardGames": "SG", "PicksAndBansS7": "PB", "Tournaments": "T", "L
 # API
 # ---------------------------------------------------------------------------
 
-def api(params, retries=6):
+BUDGET = 150  # tổng số giây tối đa dành cho việc chờ khi Leaguepedia giới hạn tốc độ
+_deadline = None
+_opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
+
+
+def _call(params, post=None):
     url = API + "?" + urllib.parse.urlencode({**params, "format": "json"})
-    for i in range(retries):
+    data = urllib.parse.urlencode(post).encode() if post else None
+    req = urllib.request.Request(url, data=data, headers={"User-Agent": UA})
+    with _opener.open(req, timeout=60) as r:
+        return json.load(r)
+
+
+def login():
+    """Đăng nhập bằng bot password (Special:BotPasswords) nếu có LP_BOT_USER/LP_BOT_PASSWORD.
+    Người dùng đăng nhập được Leaguepedia cho giới hạn tốc độ rộng hơn khách."""
+    user, pw = os.environ.get("LP_BOT_USER"), os.environ.get("LP_BOT_PASSWORD")
+    if not (user and pw):
+        return
+    token = _call({"action": "query", "meta": "tokens", "type": "login"})["query"]["tokens"]["logintoken"]
+    res = _call({"action": "login"}, {"lgname": user, "lgpassword": pw, "lgtoken": token})
+    print(f"  Đăng nhập Leaguepedia: {res.get('login', {}).get('result')}", file=sys.stderr)
+
+
+def api(params):
+    global _deadline
+    if _deadline is None:
+        _deadline = time.time() + BUDGET
+    wait = 10
+    while True:
         try:
-            req = urllib.request.Request(url, headers={"User-Agent": UA})
-            with urllib.request.urlopen(req, timeout=60) as r:
-                data = json.load(r)
+            data = _call(params)
+            err = data.get("error")
+            if not err:
+                return data
+            if err.get("code") not in ("ratelimited", "maxlag"):
+                raise RuntimeError(f"Leaguepedia báo lỗi: {err}")
+            reason = "Leaguepedia giới hạn tốc độ"
         except (urllib.error.URLError, TimeoutError, ConnectionError, ValueError) as e:
-            print(f"  Lỗi mạng: {e}", file=sys.stderr)
-            time.sleep(5 * 2 ** i)
-            continue
-        err = data.get("error")
-        if err:
-            if err.get("code") in ("ratelimited", "maxlag"):
-                wait = 20 * 2 ** i
-                print(f"  Leaguepedia giới hạn tốc độ, chờ {wait}s", file=sys.stderr)
-                time.sleep(wait)
-                continue
-            raise RuntimeError(f"Leaguepedia báo lỗi: {err}")
-        return data
-    raise RuntimeError("Leaguepedia không phản hồi sau nhiều lần thử")
+            reason = f"Lỗi mạng: {e}"
+        left = _deadline - time.time()
+        if left <= 0:
+            raise RuntimeError(f"{reason}; hết {BUDGET}s chờ, bỏ cuộc lần này")
+        w = min(wait, left)
+        print(f"  {reason}, chờ {w:.0f}s", file=sys.stderr, flush=True)
+        time.sleep(w)
+        wait *= 2
 
 
 def table_fields(table):
@@ -292,6 +319,7 @@ def main():
         since = (now - datetime.timedelta(days=a.days)).strftime("%Y-%m-%d 00:00:00")
     print(f"Leaguepedia: lấy game sau {since} (UTC)", file=sys.stderr)
 
+    login()
     rows, fp_cols = fetch_games(since)
     resolve = league_resolver(last_by_league.keys())
     new = []

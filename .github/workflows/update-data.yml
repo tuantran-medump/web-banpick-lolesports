@@ -31,7 +31,7 @@ concurrency:
 jobs:
   update:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -103,14 +103,18 @@ jobs:
       - name: Dự phòng Leaguepedia
         if: steps.today.outputs.skip != 'true' && steps.download.outputs.ok != 'true'
         id: lp
+        timeout-minutes: 6
+        continue-on-error: ${{ github.event_name != 'pull_request' }}
+        env:
+          LP_BOT_USER: ${{ secrets.LP_BOT_USER }}
+          LP_BOT_PASSWORD: ${{ secrets.LP_BOT_PASSWORD }}
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             args="--out build/lp-test"   # PR: chỉ chạy thử, không đụng public/data
           else
             args=""
           fi
-          if python scripts/lp_fallback.py --data public/data $args 2> lp-report.txt; then
-            cat lp-report.txt
+          if python -u scripts/lp_fallback.py --data public/data $args 2> >(tee lp-report.txt >&2); then
             echo "ok=true" >> "$GITHUB_OUTPUT"
             {
               echo '## Leaguepedia (dự phòng)'
@@ -120,7 +124,6 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
-          cat lp-report.txt
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             echo "::error::Không lấy được dữ liệu từ cả Oracle's Elixir và Leaguepedia"
             exit 1
