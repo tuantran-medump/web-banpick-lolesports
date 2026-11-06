@@ -190,44 +190,85 @@ function roleShare(m: Model, k: string): Record<Role, number> {
   return out;
 }
 
-/** Gán vai trò cho các tướng đã pick sao cho hợp lý nhất (thử mọi hoán vị, tối đa 5 tướng). */
-export function assignRoles(m: Model, picks: string[]): Map<string, Role> {
-  const keys = picks.map(norm);
+export interface RoleDist {
+  /** Xác suất mỗi tướng đã pick đi từng vai trò (tướng đa vai trò chia cho nhiều đường). */
+  champs: Map<string, Record<Role, number>>;
+  /** Xác suất mỗi vai trò của đội còn trống. */
+  open: Record<Role, number>;
+}
+
+const zeroRoles = (): Record<Role, number> => ({ top: 0, jng: 0, mid: 0, bot: 0, sup: 0 });
+
+/**
+ * Phân bố vai trò của một đội: xét mọi cách xếp các tướng đã pick vào 5 vai trò (không trùng),
+ * mỗi cách có trọng số bằng tích tỉ lệ vai trò của từng tướng. Ví dụ đội đã có Gragas (Top/Rừng)
+ * và Vi (Rừng) thì Gragas gần như chắc đi Top; nếu chỉ có Gragas thì cả Top lẫn Rừng còn bỏ ngỏ.
+ */
+export function roleDist(m: Model, picks: string[]): RoleDist {
+  const keys = picks.map(norm).slice(0, 5);
   const shares = keys.map((k) => roleShare(m, k));
-  let best = -1;
-  let bestPerm: Role[] = [];
+  const acc = keys.map(zeroRoles);
+  let total = 0;
   const used = new Set<Role>();
   const cur: Role[] = [];
-  const rec = (i: number, score: number) => {
+  const rec = (i: number, w: number) => {
     if (i === keys.length) {
-      if (score > best) {
-        best = score;
-        bestPerm = [...cur];
-      }
+      total += w;
+      cur.forEach((r, j) => (acc[j][r] += w));
       return;
     }
     for (const r of ROLES) {
       if (used.has(r)) continue;
       used.add(r);
       cur.push(r);
-      rec(i + 1, score * shares[i][r]);
+      rec(i + 1, w * shares[i][r]);
       cur.pop();
       used.delete(r);
     }
   };
   rec(0, 1);
-  return new Map(keys.map((k, i) => [k, bestPerm[i]]));
+  const champs = new Map<string, Record<Role, number>>();
+  const open = { top: 1, jng: 1, mid: 1, bot: 1, sup: 1 } as Record<Role, number>;
+  keys.forEach((k, j) => {
+    const d = zeroRoles();
+    for (const r of ROLES) {
+      d[r] = total ? acc[j][r] / total : 0;
+      open[r] -= d[r];
+    }
+    champs.set(k, d);
+  });
+  for (const r of ROLES) open[r] = Math.max(0, open[r]);
+  return { champs, open };
+}
+
+/** Vai trò khả dĩ nhất của từng tướng đã pick (dùng để hiển thị/kiểm thử). */
+export function assignRoles(m: Model, picks: string[]): Map<string, Role> {
+  const d = roleDist(m, picks);
+  return new Map([...d.champs].map(([k, p]) => [k, ROLES.reduce((b, r) => (p[r] > p[b] ? r : b), ROLES[0])]));
+}
+
+/** Tướng có thể đi những vai trò nào (tỉ lệ ≥ min), xếp theo tỉ lệ giảm dần. */
+export function flexRolesOf(m: Model, champion: string, min = 0.15): { role: Role; share: number }[] {
+  const a = m.champs.get(norm(champion));
+  if (!a) return [];
+  const tot = ROLES.reduce((s, r) => s + (a.roles[r] || 0), 0);
+  if (!tot) return [];
+  return ROLES.map((role) => ({ role, share: (a.roles[role] || 0) / tot }))
+    .filter((x) => x.share >= min)
+    .sort((x, y) => y.share - x.share);
 }
 
 export interface Reason {
   text: string;
   points: number; // đóng góp vào điểm (dương = tốt cho lựa chọn này)
+  info?: boolean; // chỉ để giải thích, không cộng trừ điểm
 }
 
 export interface Suggestion {
   champion: string; // tên hiển thị (theo danh sách tướng của bàn draft)
   score: number;
   role: Role | null; // vai trò dự kiến (pick) hoặc vai trò của đối thủ bị chặn (ban)
+  roles: { role: Role; p: number }[]; // các vai trò khả dĩ (≥15%), tướng đa vai trò có nhiều dòng
   reasons: Reason[];
   samples: number; // số ván có mặt (chưa trọng số)
 }
@@ -238,6 +279,8 @@ export interface StepSuggestions {
   team: TeamIdx;
   side: Side;
   assumed: string | null; // lượt trước giả định đã chọn tướng này (khi gợi ý cho lượt kế tiếp)
+  /** Tướng đã pick chưa chốt đường (đa vai trò), theo đội: dùng để giải thích vai trò còn trống. */
+  unsure: { team: TeamIdx; champion: string; roles: { role: Role; p: number }[] }[];
   items: Suggestion[];
 }
 
@@ -256,6 +299,8 @@ interface Ctx {
   allies: string[]; // tướng đã pick của đội đang đi lượt
   enemies: string[];
   avail: string[]; // tên chuẩn hóa của các tướng còn chọn được (có trong dữ liệu)
+  allyDist: RoleDist;
+  enemyDist: RoleDist;
 }
 
 function picksOfSide(g: DraftGame, side: Side): string[] {
@@ -282,6 +327,7 @@ function evaluate(ctx: Ctx, champion: string): Suggestion {
   const add = (points: number, text: string) => {
     if (Math.abs(points) >= 0.5) reasons.push({ text, points });
   };
+  const note = (text: string) => reasons.push({ text, points: 0, info: true });
   let score = 0;
   const plus = (p: number, text: string) => {
     score += p;
@@ -299,19 +345,26 @@ function evaluate(ctx: Ctx, champion: string): Suggestion {
   const wr = smoothedWr(a);
   if (a && a.rawPicks) plus(100 * (wr - 0.5), `Tỉ lệ thắng ${pct(a.wins / a.picks)} sau làm mượt ${pct(wr)} (${a.rawPicks} lần pick)`);
 
-  // Vai trò: tướng phải lấp một vai trò còn trống của đội sẽ sở hữu nó.
-  const assigned = assignRoles(m, mine);
-  const open = ROLES.filter((r) => ![...assigned.values()].includes(r));
+  // Vai trò: tướng phải lấp được vai trò còn trống của đội sẽ sở hữu nó. Vai trò của các tướng đã pick
+  // tính theo xác suất (tướng đa vai trò chưa chốt đường), nên vai trò "còn trống" cũng là xác suất.
+  const mineDist = isPick ? ctx.allyDist : ctx.enemyDist;
+  const theirDist = isPick ? ctx.enemyDist : ctx.allyDist;
   const share = roleShare(m, k);
-  const role = open.length ? open.reduce((b, r) => (share[r] > share[b] ? r : b), open[0]) : null;
-  const fit = role ? share[role] : 0;
+  const q = zeroRoles(); // xác suất tướng này sẽ đi từng vai trò nếu vào đội
+  let fit = 0;
+  for (const r of ROLES) fit += (q[r] = share[r] * mineDist.open[r]);
+  for (const r of ROLES) q[r] = fit ? q[r] / fit : 0;
+  const role: Role | null = fit ? ROLES.reduce((b, r) => (q[r] > q[b] ? r : b), ROLES[0]) : null;
   if (a && a.rawPicks >= 1) {
     if (fit < 0.15) plus(-30 * (1 - fit / 0.15), isPick ? "Không hợp vai trò đội còn thiếu" : "Đối thủ không còn thiếu vai trò của tướng này");
-    else if (mine.length && isPick) add(0.6, `Lấp vai trò ${ROLE_VI[role!]}`);
+    else if (mine.length) {
+      const likely = ROLES.filter((r) => q[r] >= 0.15).sort((x, y) => q[y] - q[x]);
+      const txt = likely.length > 1 ? likely.map((r) => `${ROLE_VI[r]} ${pct(q[r])}`).join(", ") : ROLE_VI[role!];
+      note(isPick ? `Vào đội sẽ đi: ${txt}` : `Đối thủ có thể dùng ở: ${txt}`);
+    }
   }
-
   // Linh hoạt nhiều vai trò: giá trị khi pick sớm (giấu bài), ban để bớt rủi ro.
-  const flexRoles = a ? ROLES.filter((r) => share[r] >= 0.15 && (a.roles[r] || 0) > 0) : [];
+  const flexRoles = flexRolesOf(m, champion).map((x) => x.role);
   if (flexRoles.length >= 2) {
     const early = (isPick ? mine.length : 0) <= 2;
     plus((early ? 4 : 1.5) * (flexRoles.length - 1), `Đa vai trò: ${flexRoles.map((r) => ROLE_VI[r]).join(", ")}`);
@@ -333,52 +386,69 @@ function evaluate(ctx: Ctx, champion: string): Suggestion {
     if (notes.length) plus(clamp(100 * syn, -10, 10), `Đi cùng ${notes.join(", ")}`);
   }
 
-  // Tỉ lệ thắng khi gặp các tướng đội bên kia đã pick (đối thủ cùng đường tính nặng hơn).
-  const enemyRoles = assignRoles(m, theirs);
+  // Tỉ lệ thắng khi gặp các tướng đội bên kia đã pick. Phần "cùng đường" tính theo xác suất hai tướng
+  // gặp nhau ở cùng một vai trò (tướng đa vai trò được chia cho các đường), phần còn lại tính theo cả trận.
   if (a) {
     let tot = 0;
     const notes: string[] = [];
     for (const opp of theirs) {
       const ok = norm(opp);
-      const lane = !!role && enemyRoles.get(ok) === role;
-      const p = lane ? m.lanes.get(`${role}|${k}|${ok}`) : m.vs.get(`${k}|${ok}`);
-      if (!p || p.raw < 3) continue;
-      const d = (p.wins + PRIOR_PAIR * wr) / (p.n + PRIOR_PAIR) - wr;
-      tot += (lane ? 1.5 : 0.6) * d;
-      if (Math.abs(d) >= 0.03) notes.push(`${opp}${lane ? ` (cùng đường)` : ""} ${signed(d)}, ${p.raw} ván`);
+      const pe = theirDist.champs.get(ok) || zeroRoles();
+      let laneW = 0, laneD = 0, laneRaw = 0;
+      for (const r of ROLES) {
+        const w = q[r] * pe[r];
+        if (w < 0.05) continue;
+        const p = m.lanes.get(`${r}|${k}|${ok}`);
+        if (!p || p.raw < 3) continue;
+        laneW += w;
+        laneD += w * ((p.wins + PRIOR_PAIR * wr) / (p.n + PRIOR_PAIR) - wr);
+        laneRaw += p.raw;
+      }
+      const v = m.vs.get(`${k}|${ok}`);
+      const dVs = v && v.raw >= 3 ? (v.wins + PRIOR_PAIR * wr) / (v.n + PRIOR_PAIR) - wr : 0;
+      const dLane = laneW ? laneD / laneW : 0;
+      tot += 1.5 * laneW * dLane + 0.6 * (1 - laneW) * dVs;
+      if (laneW >= 0.3 && Math.abs(dLane) >= 0.03)
+        notes.push(`${opp} (cùng đường${laneW < 0.8 ? ` ${pct(laneW)}` : ""}) ${signed(dLane)}, ${laneRaw} ván`);
+      else if (v && v.raw >= 3 && Math.abs(dVs) >= 0.03) notes.push(`${opp} ${signed(dVs)}, ${v.raw} ván`);
     }
     const pts = clamp(100 * tot, -15, 15);
     score += pts;
     if (notes.length) add(pts, `${isPick ? "Gặp" : "Khi gặp bên mình"}: ${notes.join("; ")}`);
   }
 
-  // Nhìn trước các lượt còn lại (chỉ khi pick): đối thủ còn tướng nào counter được, đội mình còn kèo nào đi cùng.
+  // Nhìn trước các lượt còn lại (chỉ khi pick): đối thủ còn tướng nào counter được ở các đường tướng này
+  // có thể đi, đội mình còn kèo nào đi cùng cho các vai trò còn trống.
   if (isPick && a && role) {
-    const enemyOpen = ROLES.filter((r) => ![...enemyRoles.values()].includes(r));
-    if (theirs.length < 5 && enemyOpen.includes(role)) {
-      let best: { c: string; d: number; raw: number } | null = null;
+    if (theirs.length < 5) {
+      let best: { c: string; d: number; w: number; raw: number; r: Role } | null = null;
       let laneGames = 0;
-      for (const c of ctx.avail) {
-        if (c === k) continue;
-        const p = m.lanes.get(`${role}|${c}|${k}`);
-        if (!p) continue;
-        laneGames += p.raw;
-        if (p.raw < 3) continue;
-        const cw = smoothedWr(m.champs.get(c));
-        const d = (p.wins + PRIOR_PAIR * cw) / (p.n + PRIOR_PAIR) - cw;
-        if (!best || d > best.d) best = { c, d, raw: p.raw };
+      for (const r of ROLES) {
+        const w = q[r] * theirDist.open[r];
+        if (w < 0.1) continue;
+        for (const c of ctx.avail) {
+          if (c === k) continue;
+          const p = m.lanes.get(`${r}|${c}|${k}`);
+          if (!p) continue;
+          laneGames += p.raw;
+          if (p.raw < 3) continue;
+          const cw = smoothedWr(m.champs.get(c));
+          const d = (p.wins + PRIOR_PAIR * cw) / (p.n + PRIOR_PAIR) - cw;
+          if (!best || d * w > best.d * best.w) best = { c, d, w, raw: p.raw, r };
+        }
       }
       if (best && best.d >= 0.03)
-        plus(-clamp(80 * best.d, 0, 8), `Đối thủ còn counter được: ${m.champs.get(best.c)!.name} ${signed(best.d)} (${best.raw} ván)`);
+        plus(-clamp(80 * best.d * best.w, 0, 8),
+          `Đối thủ còn counter được: ${m.champs.get(best.c)!.name} (${ROLE_VI[best.r]}) ${signed(best.d)} (${best.raw} ván)`);
       else if (laneGames >= 8) plus(2, "Chưa thấy tướng nào còn lại counter rõ (an toàn khi pick sớm)");
     }
-    const ourOpen = open.filter((r) => r !== role);
-    if (ourOpen.length) {
+    if (mine.length < 4) {
+      const after = roleDist(m, [...mine, champion]).open;
       let best: { c: string; d: number; raw: number } | null = null;
       for (const c of ctx.avail) {
         if (c === k) continue;
         const sh = roleShare(m, c);
-        if (!ourOpen.some((r) => sh[r] >= 0.15)) continue;
+        if (ROLES.reduce((x, r) => x + sh[r] * after[r], 0) < 0.15) continue;
         const p = m.pairs.get(pairKey(k, c));
         if (!p || p.raw < 3) continue;
         const exp = (wr + smoothedWr(m.champs.get(c))) / 2;
@@ -410,8 +480,10 @@ function evaluate(ctx: Ctx, champion: string): Suggestion {
       plus(clamp(3 * Math.log2(L.lift), -5, 5), `Ván ${ctx.gameNo} của series: presence ×${L.lift.toFixed(1)} so với trung bình`);
   }
 
-  reasons.sort((x, y) => Math.abs(y.points) - Math.abs(x.points));
-  return { champion, score, role, reasons, samples: a?.rawPresence || 0 };
+  // Lý do có điểm xếp trước theo độ lớn, ghi chú giải thích để sau.
+  reasons.sort((x, y) => Number(!!x.info) - Number(!!y.info) || Math.abs(y.points) - Math.abs(x.points));
+  const roles = ROLES.filter((r) => q[r] >= 0.15).map((r) => ({ role: r, p: q[r] })).sort((x, y) => y.p - x.p);
+  return { champion, score, role, roles, reasons, samples: a?.rawPresence || 0 };
 }
 
 /** Gợi ý cho lượt hiện tại của ván đang draft (null nếu ván đã xong). */
@@ -424,7 +496,10 @@ export function suggestStep(m: Model, series: Series, pool: string[], limit = 5,
   const ctx: Ctx = {
     m, g, gameNo: series.games.length, step, index, side,
     allies: picksOfSide(g, side), enemies: picksOfSide(g, other(side)), avail: [],
+    allyDist: roleDist(m, []), enemyDist: roleDist(m, []),
   };
+  ctx.allyDist = roleDist(m, ctx.allies);
+  ctx.enemyDist = roleDist(m, ctx.enemies);
   // Chỉ gợi ý tướng còn chọn được và có xuất hiện trong dữ liệu.
   const cand = pool.filter((c) => availability(series, c).ok && m.champs.get(norm(c))?.rawPresence);
   ctx.avail = cand.map(norm);
@@ -432,7 +507,16 @@ export function suggestStep(m: Model, series: Series, pool: string[], limit = 5,
     .map((c) => evaluate(ctx, c))
     .sort((x, y) => y.score - x.score || x.champion.localeCompare(y.champion))
     .slice(0, limit);
-  return { index, step, team: teamOf(g, step.turn), side, assumed, items };
+  const team = teamOf(g, step.turn);
+  const unsure: StepSuggestions["unsure"] = [];
+  for (const [t, picks, dist] of [[team, ctx.allies, ctx.allyDist], [(1 - team) as TeamIdx, ctx.enemies, ctx.enemyDist]] as const) {
+    for (const c of picks) {
+      const d = dist.champs.get(norm(c));
+      if (!d || Math.max(...ROLES.map((r) => d[r])) >= 0.8) continue;
+      unsure.push({ team: t, champion: c, roles: ROLES.filter((r) => d[r] >= 0.15).map((r) => ({ role: r, p: d[r] })).sort((x, y) => y.p - x.p) });
+    }
+  }
+  return { index, step, team, side, assumed, unsure, items };
 }
 
 /** Gợi ý cho lượt hiện tại và lượt kế tiếp (giả định lượt hiện tại chọn gợi ý số 1). */

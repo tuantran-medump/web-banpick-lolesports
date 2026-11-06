@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_FILTERS, filesFor, filtersFromHash, filtersToHash, type Filters } from "./filters";
-import { computeStats, teamsOf } from "./stats";
+import { computeStats, rolesOf, teamsOf } from "./stats";
 import type { DataIndex, Game, Side, TeamSide } from "./types";
 
 function side(team: string, win: boolean, picks: string[], bans: string[]): TeamSide {
@@ -103,5 +103,13 @@ describe("filters", () => {
     };
     expect(filesFor(idx, F()).map((l) => l.file)).toEqual(["2026/LCK.json"]);
     expect(filesFor(idx, F({ tiers: ["1", "1.5"], from: "2026-09-15" })).map((l) => l.file)).toEqual(["2027/LCS.json"]);
+  });
+});
+
+describe("rolesOf", () => {
+  it("liệt kê mọi vai trò từ 15% trở lên", () => {
+    const st = { roles: { top: 6, jng: 3, sup: 1 } } as unknown as Parameters<typeof rolesOf>[0];
+    expect(rolesOf(st).map((x) => x.role)).toEqual(["top", "jng"]);
+    expect(rolesOf(st, 0.1).map((x) => x.role)).toEqual(["top", "jng", "sup"]);
   });
 });

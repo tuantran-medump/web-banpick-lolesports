@@ -55,6 +55,13 @@ export function SuggestPanel({ dd, series, steps, samples, onChoose }: Props) {
               <b>Lượt {st.index + 1}</b> · <span className={st.side}>{series.teams[st.team]} ({SIDE_NAMES[st.side]})</span> {st.step.kind === "ban" ? "cấm" : "chọn"}
               {st.assumed && <span className="muted small"> · nếu lượt trước lấy {st.assumed}</span>}
             </div>
+            {st.unsure.length > 0 && (
+              <p className="muted small flex-note">
+                Chưa chốt đường:{" "}
+                {st.unsure.map((u) => `${u.champion} của ${series.teams[u.team]} (${u.roles.map((r) => `${ROLE_NAMES[r.role]} ${(100 * r.p).toFixed(0)}%`).join(" / ")})`).join("; ")}.
+                Vai trò còn trống và đối đầu cùng đường được tính theo các khả năng này.
+              </p>
+            )}
             {st.items.length === 0 && <p className="muted small">Chưa đủ dữ liệu để gợi ý.</p>}
             <ol className="suggest-list">
               {st.items.map((x, i) => {
@@ -71,13 +78,16 @@ export function SuggestPanel({ dd, series, steps, samples, onChoose }: Props) {
                       <span className="suggest-name">
                         <b>{x.champion}</b>
                         <small className="muted">
-                          {x.role && (st.step.kind === "pick" ? ROLE_NAMES[x.role] : `chặn ${ROLE_NAMES[x.role]}`)} · {x.score.toFixed(0)} điểm
+                          {x.roles.length > 0 && (st.step.kind === "pick" ? "" : "chặn ")}
+                          {x.roles.length === 1 ? ROLE_NAMES[x.roles[0].role]
+                            : x.roles.map((r) => `${ROLE_NAMES[r.role]} ${(100 * r.p).toFixed(0)}%`).join(" / ")}
+                          {x.roles.length > 0 && " · "}{x.score.toFixed(0)} điểm
                         </small>
                       </span>
                     </button>
                     <ul className="reasons">
                       {shown.map((r, j) => (
-                        <li key={j} className={r.points >= 0 ? "up" : "down"}>{r.text}</li>
+                        <li key={j} className={r.info ? "info" : r.points >= 0 ? "up" : "down"}>{r.text}</li>
                       ))}
                     </ul>
                     {x.reasons.length > keep && (

@@ -256,6 +256,7 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 .reasons li::before { display: inline-block; width: 14px; font-weight: 700; }
 .reasons li.up::before { content: "+"; color: var(--good); }
 .reasons li.down::before { content: "−"; color: var(--bad); }
+.reasons li.info::before { content: "·"; color: var(--muted); }
 .more-link { background: none; border: 0; padding: 0 0 0 24px; color: var(--accent); cursor: pointer; }
 
 /* Nút Cập nhật và chọn giao diện */
@@ -285,3 +286,6 @@ footer p { margin: 0 0 6px; }
   table { font-size: 13px; }
   th, td { padding: 5px 7px; }
 }
+.roles-cell small { color: var(--muted); font-size: 11px; }
+.roles-cell .alt-role { white-space: nowrap; }
+.flex-note { margin: 0 0 6px; }
