@@ -19,6 +19,8 @@ Cách dùng:
 Biến môi trường (không bắt buộc):
   OE_DRIVE_FOLDER_ID  mã thư mục Google Drive của Oracle's Elixir
   OE_FILE_IDS         chỉ định thẳng mã file, ví dụ "2026=1AbC...,2025=1XyZ..."
+  GOOGLE_API_KEY      khóa API Google (đã bật Google Drive API), dùng khi link công khai
+                      bị báo "Quota exceeded"
 """
 import argparse
 import html
@@ -85,21 +87,48 @@ def stream_to(resp, path):
     return None
 
 
-def download_drive(file_id, path):
-    url = ("https://drive.usercontent.google.com/download?"
-           + urllib.parse.urlencode({"id": file_id, "export": "download", "confirm": "t"}))
-    page = stream_to(get(url), path)
+def _try(url, path, label):
+    """Thử một link tải. True nếu đã ghi CSV, ngược lại in lý do và trả về False."""
+    try:
+        page = stream_to(get(url), path)
+    except urllib.error.HTTPError as e:
+        body = e.read(300).decode("utf-8", "replace")
+        print(f"  {label}: HTTP {e.code} {body[:200]!r}", file=sys.stderr)
+        return False
     if page is None:
         return True
-    # Trang xác nhận tải file lớn: gửi lại form với các trường ẩn
     text = page.decode("utf-8", "replace")
+    # Trang xác nhận tải file lớn: gửi lại form với các trường ẩn
     form = re.search(r'<form[^>]+action="([^"]+)"', text)
     fields = dict(re.findall(r'<input type="hidden" name="([^"]+)" value="([^"]*)"', text))
     if form and fields:
-        url = html.unescape(form.group(1)) + "?" + urllib.parse.urlencode(fields)
-        if stream_to(get(url), path) is None:
+        url2 = html.unescape(form.group(1)) + "?" + urllib.parse.urlencode(fields)
+        if stream_to(get(url2), path) is None:
             return True
-    print(f"  Drive trả về trang không phải CSV: {text[:200]!r}", file=sys.stderr)
+    title = re.search(r"<title>([^<]*)</title>", text)
+    print(f"  {label}: trả về trang HTML ({title.group(1) if title else text[:120]!r})", file=sys.stderr)
+    return False
+
+
+def download_drive(file_id, path):
+    """Thử lần lượt: Drive API (nếu có GOOGLE_API_KEY), rồi hai link tải công khai.
+    File của Oracle's Elixir hay bị Google báo "Quota exceeded" ở link công khai vì quá
+    nhiều người tải; Drive API dùng hạn mức riêng nên thường vẫn tải được."""
+    key = os.environ.get("GOOGLE_API_KEY")
+    tries = []
+    if key:
+        tries.append(("Drive API", f"https://www.googleapis.com/drive/v3/files/{file_id}?"
+                      + urllib.parse.urlencode({"alt": "media", "key": key})))
+    tries += [
+        ("drive.usercontent", "https://drive.usercontent.google.com/download?"
+         + urllib.parse.urlencode({"id": file_id, "export": "download", "confirm": "t"})),
+        ("drive uc", "https://drive.google.com/uc?"
+         + urllib.parse.urlencode({"id": file_id, "export": "download", "confirm": "t"})),
+    ]
+    for label, url in tries:
+        if _try(url, path, label):
+            print(f"  Tải được qua {label}", file=sys.stderr)
+            return True
     return False
 
 

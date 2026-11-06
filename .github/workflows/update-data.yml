@@ -52,6 +52,7 @@ jobs:
         env:
           OE_DRIVE_FOLDER_ID: ${{ vars.OE_DRIVE_FOLDER_ID }}
           OE_FILE_IDS: ${{ vars.OE_FILE_IDS }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
           YEARS: ${{ steps.years.outputs.years }}
         run: |
           python scripts/oe_download.py $YEARS --dir raw --optional

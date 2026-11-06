@@ -30,6 +30,16 @@ Có thể chạy tay ở tab Actions, mục "Run workflow", và nhập năm (ví
 - `OE_DRIVE_FOLDER_ID`: mã thư mục Google Drive nếu Oracle's Elixir đổi thư mục.
 - `OE_FILE_IDS`: chỉ định thẳng mã file Drive, ví dụ `2026=1AbC...,2025=1XyZ...`.
 
+### Khóa Google Drive API (secret `GOOGLE_API_KEY`)
+
+File của Oracle's Elixir rất nhiều người tải nên link Drive công khai hay bị Google báo
+"Quota exceeded". Drive API dùng hạn mức riêng, nên nên thêm một khóa API:
+
+1. Vào https://console.cloud.google.com, tạo project (miễn phí).
+2. "APIs & Services" > "Library", bật **Google Drive API**.
+3. "APIs & Services" > "Credentials" > "Create credentials" > "API key". Nên giới hạn khóa chỉ cho Google Drive API.
+4. Trong repo: Settings > Secrets and variables > Actions > New repository secret, tên `GOOGLE_API_KEY`.
+
 ### Chạy trên máy
 
 ```
