@@ -102,9 +102,11 @@ export function StatsTable({ summary, dd }: { summary: Summary; dd: DDragon | nu
               return (
                 <tr key={s.champion}>
                   <td className="num muted">{i + 1}</td>
-                  <th scope="row" className="champ">
-                    <Icon dd={dd} name={s.champion} />
-                    <span>{s.champion}</span>
+                  <th scope="row" className="champ-cell">
+                    <span className="champ-label">
+                      <Icon dd={dd} name={s.champion} />
+                      <span>{s.champion}</span>
+                    </span>
                   </th>
                   <td className="muted">{role ? ROLE_NAMES[role] : "–"}</td>
                   <td className="metric">

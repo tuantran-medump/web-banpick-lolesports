@@ -36,6 +36,7 @@ export interface Game {
   seriesId: string;
   fearlessUsed: string[];
   source?: string;
+  matchId?: string; // mã trận của Leaguepedia (ván lấy bằng nút Cập nhật)
 }
 
 export interface LeagueEntry {
@@ -46,6 +47,7 @@ export interface LeagueEntry {
   games: number;
   series: number;
   leaguepediaGames?: number;
+  localGames?: number; // số ván lấy bằng nút Cập nhật, chỉ có trong trình duyệt này
   firstDate: string;
   lastDate: string;
   maxGameInSeries: number;

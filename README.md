@@ -16,6 +16,13 @@ và chỉ tải những giải cần cho bộ lọc đang chọn.
   Chế độ Fearless (Bo1/Bo3/Bo5): tướng đã pick ở ván trước bị khóa cho cả hai đội (tướng bị ban thì không).
   Lọc tướng theo vai trò và xếp theo presence, lấy từ bộ lọc ở tab Thống kê. Series được lưu trong trình duyệt.
 - Ảnh tướng lấy từ Data Dragon của Riot (bản mới nhất), lưu trong trình duyệt một ngày.
+- Nút **Cập nhật** (góc trên): trình duyệt tự hỏi [Leaguepedia](https://lol.fandom.com) (Cargo API, `origin=*`) các ván mới hơn
+  dữ liệu của web, lưu vào IndexedDB của trình duyệt đó và gộp vào thống kê, bàn draft, gợi ý. Lấy lùi 3 ngày so với ván mới nhất để không sót.
+  Leaguepedia giới hạn tốc độ thì web tự chờ rồi thử lại (8s, 16s, 32s…, tối đa 90 giây), quá lâu thì dừng nhưng vẫn giữ các ván đã lấy được,
+  lần sau bấm sẽ lấy tiếp. Sau mỗi lần bấm phải chờ 1 phút (5 phút nếu vừa bị giới hạn). Khi dữ liệu của web đã có các ván đó,
+  bản trong trình duyệt tự bị xóa. Có nút "xóa" để bỏ hết dữ liệu đã cập nhật.
+- Giao diện sáng/tối theo máy, hoặc chọn cố định ở ô "Giao diện". Trên điện thoại bộ lọc được thu gọn, thanh lượt draft luôn hiện khi cuộn.
+- Chân trang ghi nguồn: Oracle's Elixir, Leaguepedia (CC BY-SA 3.0), Data Dragon và câu miễn trừ của Riot.
 
 Chạy trên máy (cần Node 22):
 
