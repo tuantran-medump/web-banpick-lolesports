@@ -4,7 +4,7 @@ import { FilterPanel } from "./components/FilterPanel";
 import { StatsTable } from "./components/StatsTable";
 import { UpdateButton } from "./components/UpdateButton";
 import { loadIndex, loadLeagueFile, loadMeta } from "./data";
-import { mergeLocal } from "./local";
+import { countBySource, mergeLocal } from "./local";
 import { deleteLocalGames, getLocalGames } from "./localdb";
 import { THEME_NAMES, THEMES, useNarrow, useTheme } from "./theme";
 import { loadDDragon, type DDragon } from "./ddragon";
@@ -103,7 +103,7 @@ export default function App() {
   const effective = useMemo(() => ({ ...filters, team }), [filters, team]);
   const summary = useMemo(() => computeStats(games, effective), [games, effective]);
 
-  const localShown = merged ? [...merged.byFile.values()].reduce((n, gs) => n + gs.length, 0) : 0;
+  const localCounts = useMemo(() => countBySource(merged), [merged]);
   const lastGame = index?.leagues.reduce((m, l) => (l.lastDate > m ? l.lastDate : m), "").slice(0, 10);
   const scope = [
     filters.leagues.length ? filters.leagues.map(leagueName).join(", ") : `Tier ${filters.tiers.join(", ")}`,
@@ -130,7 +130,7 @@ export default function App() {
             {lastGame && <>Ván mới nhất: {lastGame}</>}
             {meta?.updated && <> · Dữ liệu web: {meta.updated}</>}
           </p>
-          <UpdateButton snapshot={snapshot} local={local} localShown={localShown} onLocal={setLocal} />
+          <UpdateButton snapshot={snapshot} local={local} counts={localCounts} onLocal={setLocal} />
         </div>
         <label className="theme-pick small">
           <span className="muted">Giao diện</span>

@@ -3,6 +3,7 @@ import { RateLimitError } from "../leaguepedia";
 import { clearLocalGames, getLocalGames, putLocalGames } from "../localdb";
 import { runUpdate, type UpdateStatus } from "../local";
 import type { DataIndex, Game } from "../types";
+import { CsvImport } from "./CsvImport";
 
 const COOLDOWN_KEY = "lp-cooldown-until";
 const AFTER_OK = 60_000; // bấm lại sau 1 phút
@@ -26,12 +27,12 @@ const writeCooldown = (until: number) => {
 interface Props {
   snapshot: DataIndex | null;
   local: Game[];
-  localShown: number; // số ván trong trình duyệt còn mới hơn dữ liệu của web
+  counts: { lp: number; csv: number }; // số ván trong trình duyệt còn mới hơn dữ liệu của web, theo nguồn
   onLocal: (games: Game[]) => void;
 }
 
 /** Nút "Cập nhật": lấy ván mới hơn dữ liệu của web từ Leaguepedia, lưu trong trình duyệt. */
-export function UpdateButton({ snapshot, local, localShown, onLocal }: Props) {
+export function UpdateButton({ snapshot, local, counts, onLocal }: Props) {
   const [status, setStatus] = useState<UpdateStatus | null>(null);
   const [msg, setMsg] = useState<{ text: string; bad?: boolean } | null>(null);
   const [cooldown, setCooldown] = useState(readCooldown);
@@ -84,7 +85,7 @@ export function UpdateButton({ snapshot, local, localShown, onLocal }: Props) {
   async function clear() {
     await clearLocalGames();
     onLocal([]);
-    setMsg({ text: "Đã xóa các ván cập nhật trong trình duyệt này." });
+    setMsg({ text: "Đã xóa các ván cập nhật và CSV đã nạp trong trình duyệt này." });
   }
 
   let label = "Cập nhật";
@@ -101,9 +102,10 @@ export function UpdateButton({ snapshot, local, localShown, onLocal }: Props) {
         {running && (
           <button type="button" className="btn" onClick={() => ctrl.current?.abort()}>Dừng</button>
         )}
-        {!running && localShown > 0 && (
+        <CsvImport snapshot={snapshot} disabled={running} onLocal={onLocal} onMessage={setMsg} />
+        {!running && counts.lp + counts.csv > 0 && (
           <span className="muted small">
-            +{localShown} ván từ Leaguepedia ·{" "}
+            {[counts.csv && `+${counts.csv} ván từ CSV`, counts.lp && `+${counts.lp} ván từ Leaguepedia`].filter(Boolean).join(", ")} ·{" "}
             <button type="button" className="link small" onClick={clear}>xóa</button>
           </span>
         )}
