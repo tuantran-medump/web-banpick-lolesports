@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { DraftBoard } from "./components/DraftBoard";
 import { FilterPanel } from "./components/FilterPanel";
 import { StatsTable } from "./components/StatsTable";
 import { loadIndex, loadLeagueFile, loadMeta } from "./data";
@@ -13,7 +14,11 @@ const SIDE_TEXT: Record<Filters["side"], string> = {
   all: "", blue: "phe xanh", red: "phe đỏ", first: "đội pick trước", second: "đội pick sau",
 };
 
+type View = "stats" | "draft";
+const viewFromHash = (h: string): View => (new URLSearchParams(h.replace(/^#/, "")).get("view") === "draft" ? "draft" : "stats");
+
 export default function App() {
+  const [view, setView] = useState<View>(() => viewFromHash(location.hash));
   const [index, setIndex] = useState<DataIndex | null>(null);
   const [meta, setMeta] = useState<Meta | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -26,16 +31,19 @@ export default function App() {
     loadIndex().then(setIndex, (e) => setError(String(e.message || e)));
     loadMeta().then(setMeta);
     loadDDragon().then(setDd);
-    const onHash = () => setFilters(filtersFromHash(location.hash));
+    const onHash = () => {
+      setFilters(filtersFromHash(location.hash));
+      setView(viewFromHash(location.hash));
+    };
     addEventListener("hashchange", onHash);
     return () => removeEventListener("hashchange", onHash);
   }, []);
 
-  // Ghi bộ lọc lên URL để chia sẻ được.
+  // Ghi bộ lọc và tab đang mở lên URL để chia sẻ được.
   useEffect(() => {
-    const h = filtersToHash(filters);
+    const h = [filtersToHash(filters), view === "draft" ? "view=draft" : ""].filter(Boolean).join("&");
     if (h !== location.hash.replace(/^#/, "")) history.replaceState(null, "", h ? `#${h}` : location.pathname);
-  }, [filters]);
+  }, [filters, view]);
 
   // Chỉ tải các file giải cần cho bộ lọc hiện tại.
   const files = useMemo(() => (index ? filesFor(index, filters).map((l) => l.file) : []), [index, filters]);
@@ -83,6 +91,14 @@ export default function App() {
           <h1>Banpick LoL</h1>
           <p className="muted">Thống kê ban/pick tướng ở các giải chuyên nghiệp</p>
         </div>
+        <nav className="tabs" aria-label="Chế độ">
+          <button type="button" className={view === "stats" ? "on" : ""} aria-pressed={view === "stats"} onClick={() => setView("stats")}>
+            Thống kê
+          </button>
+          <button type="button" className={view === "draft" ? "on" : ""} aria-pressed={view === "draft"} onClick={() => setView("draft")}>
+            Bàn draft
+          </button>
+        </nav>
         <p className="muted small">
           {lastGame && <>Ván mới nhất: {lastGame}</>}
           {meta?.updated && <> · Cập nhật: {meta.updated}</>}
@@ -92,7 +108,9 @@ export default function App() {
       {error && <div className="alert">Lỗi: {error}</div>}
       {!index && !error && <div className="loading">Đang tải danh sách giải…</div>}
 
-      {index && (
+      {view === "draft" && <DraftBoard dd={dd} summary={summary} scope={scope} />}
+
+      {index && view === "stats" && (
         <>
           <FilterPanel index={index} filters={filters} onChange={setFilters} teams={teams} />
           {filters.team && !team && (
