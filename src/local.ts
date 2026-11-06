@@ -3,6 +3,7 @@
 import {
   assignSeries, buildFields, buildGame, fetchSince, leagueResolver, makeApi, sleep, tableFields, type ApiOptions, type Row,
 } from "./leaguepedia";
+import { CSV_SOURCE } from "./oe";
 import type { DataIndex, Game, LeagueEntry, PatchEntry } from "./types";
 
 const slug = (s: string) => (s || "unknown").replace(/[^A-Za-z0-9._-]+/g, "_").replace(/^_+|_+$/g, "") || "unknown";
@@ -22,14 +23,25 @@ export interface Merged {
   stale: string[];
 }
 
-/** Chỉ giữ ván mới hơn ván cuối cùng của giải đó trong dữ liệu có sẵn, rồi thêm vào index. */
+/**
+ * Chỉ giữ ván mới hơn ván cuối cùng của giải đó trong dữ liệu có sẵn, rồi thêm vào index.
+ * Ván từ CSV nạp tay (Oracle's Elixir) thay cho ván Leaguepedia cùng khoảng thời gian.
+ */
 export function mergeLocal(snapshot: DataIndex, local: Game[]): Merged {
   const last = lastByLeague(snapshot);
+  const csvLast = new Map<string, string>();
+  for (const g of local) {
+    if (g.source === CSV_SOURCE && g.date > (last.get(g.league) || "") && g.date > (csvLast.get(g.league) || "")) {
+      csvLast.set(g.league, g.date);
+    }
+  }
   const fileOf = new Map(snapshot.leagues.map((l) => [`${l.year}|${l.league}`, l.file]));
   const byFile = new Map<string, Game[]>();
   const stale: string[] = [];
   for (const g of local) {
-    const l = last.get(g.league);
+    let l = last.get(g.league) || "";
+    const c = csvLast.get(g.league) || "";
+    if (g.source !== CSV_SOURCE && c > l) l = c;
     if (l && g.date <= l) {
       stale.push(g.id);
       continue;
@@ -163,4 +175,17 @@ export async function runUpdate(snapshot: DataIndex, local: Game[], deps: Update
     deps.onStatus?.({ kind: "fetching", fetched, added });
   });
   return { added, fetched, local: [...all.values()] };
+}
+
+/** Ván trong CSV mà dữ liệu của web chưa có (mới hơn ván cuối cùng của từng giải). */
+export function newerThanSnapshot(snapshot: DataIndex | null, games: Game[]): Game[] {
+  const last = snapshot ? lastByLeague(snapshot) : new Map<string, string>();
+  return games.filter((g) => g.date > (last.get(g.league) || ""));
+}
+
+/** Đếm ván trong trình duyệt theo nguồn. */
+export function countBySource(merged: Merged | null): { lp: number; csv: number } {
+  const n = { lp: 0, csv: 0 };
+  for (const gs of merged?.byFile.values() || []) for (const g of gs) n[g.source === CSV_SOURCE ? "csv" : "lp"]++;
+  return n;
 }

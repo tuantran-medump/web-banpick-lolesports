@@ -21,6 +21,9 @@ và chỉ tải những giải cần cho bộ lọc đang chọn.
   Leaguepedia giới hạn tốc độ thì web tự chờ rồi thử lại (8s, 16s, 32s…, tối đa 90 giây), quá lâu thì dừng nhưng vẫn giữ các ván đã lấy được,
   lần sau bấm sẽ lấy tiếp. Sau mỗi lần bấm phải chờ 1 phút (5 phút nếu vừa bị giới hạn). Khi dữ liệu của web đã có các ván đó,
   bản trong trình duyệt tự bị xóa. Có nút "xóa" để bỏ hết dữ liệu đã cập nhật.
+- Nút **Nạp CSV**: chọn file CSV tải từ [Oracle's Elixir](https://oracleselixir.com) (hoặc file `.zip` chứa CSV).
+  Trình duyệt tự đọc và chuyển đổi giống `scripts/oe_convert.py`, chỉ lưu những ván web chưa có vào IndexedDB của trình duyệt đó.
+  Ván từ CSV thay cho ván Leaguepedia cùng khoảng thời gian. Muốn mọi người cùng thấy thì vẫn đưa file lên `manual/` như bên dưới.
 - Giao diện sáng/tối theo máy, hoặc chọn cố định ở ô "Giao diện". Trên điện thoại bộ lọc được thu gọn, thanh lượt draft luôn hiện khi cuộn.
 - Chân trang ghi nguồn: Oracle's Elixir, Leaguepedia (CC BY-SA 3.0), Data Dragon và câu miễn trừ của Riot.
 
