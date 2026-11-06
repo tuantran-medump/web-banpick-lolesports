@@ -7,7 +7,7 @@ import {
 } from "../draft";
 import type { Filters } from "../filters";
 import { rolesOf, type Summary } from "../stats";
-import { buildModel, suggestNext } from "../suggest";
+import { buildModel, predictWin, suggestNext } from "../suggest";
 import { ROLES, type Game, type Role, type Side } from "../types";
 import { SuggestPanel } from "./SuggestPanel";
 
@@ -113,7 +113,9 @@ export function DraftBoard({ dd, summary, scope, games, filters }: Props) {
 
   // Gợi ý cho lượt hiện tại và lượt kế tiếp, theo cùng bộ lọc với tab Thống kê.
   const model = useMemo(() => buildModel(games, filters), [games, filters]);
-  const suggestions = useMemo(() => suggestNext(model, series, pool), [model, series, pool]);
+  const [lane, setLane] = useState<Role | null>(null);
+  const suggestions = useMemo(() => suggestNext(model, series, pool, 5, lane), [model, series, pool, lane]);
+  const win = useMemo(() => predictWin(model, series.games[series.games.length - 1]), [model, series]);
 
   const list = useMemo(() => {
     const qq = norm(q);
@@ -221,7 +223,8 @@ export function DraftBoard({ dd, summary, scope, games, filters }: Props) {
         </div>
       </div>
 
-      <SuggestPanel dd={dd} series={series} steps={suggestions} samples={summary.games} onChoose={(c) => choose(c)} />
+      <SuggestPanel dd={dd} series={series} steps={suggestions} samples={summary.games} onChoose={(c) => choose(c)}
+        lane={lane} onLane={setLane} win={win} />
 
       <div className="draft-board">
         <TeamColumn series={series} g={g} side="blue" dd={dd} />

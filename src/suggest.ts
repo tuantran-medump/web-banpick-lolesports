@@ -55,6 +55,8 @@ export interface Model {
   lanes: Map<string, PairAgg>; // "role|a|b": a đối đầu b cùng đường, wins là của a
   vs: Map<string, PairAgg>; // "a|b": a gặp b ở đội bên kia (mọi vai trò), wins là của a
   latestPatch: string | null;
+  blueWins: number; // số ván phe xanh thắng (chưa trọng số) trong các ván khớp bộ lọc
+  decided: number;
 }
 
 const zeros = (n: number) => new Array<number>(n).fill(0);
@@ -69,7 +71,7 @@ export function buildModel(games: Game[], f: Filters): Model {
 
   const m: Model = {
     units: 0, rawUnits: 0, totalPicks: 0, totalBans: 0, pickAt: zeros(10), banAt: zeros(10), byGame: zeros(5),
-    champs: new Map(), pairs: new Map(), lanes: new Map(), vs: new Map(), latestPatch: patches[0] || null,
+    champs: new Map(), pairs: new Map(), lanes: new Map(), vs: new Map(), blueWins: 0, decided: 0, latestPatch: patches[0] || null,
   };
   const get = (c: string) => {
     const k = norm(c);
@@ -93,6 +95,10 @@ export function buildModel(games: Game[], f: Filters): Model {
     const w = TIER_WEIGHT[g.tier] * PATCH_DECAY ** (rank.get(g.patchLabel || "") ?? patches.length);
     const gi = g.gameInSeries && g.gameInSeries >= 1 && g.gameInSeries <= 5 ? g.gameInSeries - 1 : -1;
     const sides = sidesOf(g, f);
+    if (g.winner) {
+      m.decided++;
+      if (g.winner === "blue") m.blueWins++;
+    }
 
     // Thứ tự pick/ban trong ván (chỉ khi dữ liệu có thứ tự).
     const pickOrd = new Map<string, number>();
@@ -281,6 +287,8 @@ export interface StepSuggestions {
   assumed: string | null; // lượt trước giả định đã chọn tướng này (khi gợi ý cho lượt kế tiếp)
   /** Tướng đã pick chưa chốt đường (đa vai trò), theo đội: dùng để giải thích vai trò còn trống. */
   unsure: { team: TeamIdx; champion: string; roles: { role: Role; p: number }[] }[];
+  lane: Role | null; // null = gợi ý chung
+  laneOpen: number | null; // xác suất đường đó còn trống
   items: Suggestion[];
 }
 
@@ -319,7 +327,7 @@ function lift(x: number, champTotal: number, slotTotal: number, allTotal: number
 }
 
 /** Đánh giá một tướng cho lượt hiện tại của ngữ cảnh. */
-function evaluate(ctx: Ctx, champion: string): Suggestion {
+function evaluate(ctx: Ctx, champion: string, lane: Role | null = null): Suggestion {
   const { m, step } = ctx;
   const k = norm(champion);
   const a = m.champs.get(k);
@@ -352,7 +360,8 @@ function evaluate(ctx: Ctx, champion: string): Suggestion {
   const share = roleShare(m, k);
   const q = zeroRoles(); // xác suất tướng này sẽ đi từng vai trò nếu vào đội
   let fit = 0;
-  for (const r of ROLES) fit += (q[r] = share[r] * mineDist.open[r]);
+  // Gợi ý theo lane: tướng được xét ở đúng đường đó.
+  for (const r of ROLES) fit += (q[r] = lane ? (r === lane ? share[r] * Math.max(mineDist.open[r], 0.15) : 0) : share[r] * mineDist.open[r]);
   for (const r of ROLES) q[r] = fit ? q[r] / fit : 0;
   const role: Role | null = fit ? ROLES.reduce((b, r) => (q[r] > q[b] ? r : b), ROLES[0]) : null;
   if (a && a.rawPicks >= 1) {
@@ -487,7 +496,8 @@ function evaluate(ctx: Ctx, champion: string): Suggestion {
 }
 
 /** Gợi ý cho lượt hiện tại của ván đang draft (null nếu ván đã xong). */
-export function suggestStep(m: Model, series: Series, pool: string[], limit = 5, assumed: string | null = null): StepSuggestions | null {
+export function suggestStep(m: Model, series: Series, pool: string[], limit = 5, assumed: string | null = null,
+  lane: Role | null = null): StepSuggestions | null {
   const g = series.games[series.games.length - 1];
   const step = currentStep(g);
   if (!step) return null;
@@ -504,7 +514,8 @@ export function suggestStep(m: Model, series: Series, pool: string[], limit = 5,
   const cand = pool.filter((c) => availability(series, c).ok && m.champs.get(norm(c))?.rawPresence);
   ctx.avail = cand.map(norm);
   const items = cand
-    .map((c) => evaluate(ctx, c))
+    .filter((c) => !lane || flexRolesOf(m, c).some((x) => x.role === lane))
+    .map((c) => evaluate(ctx, c, lane))
     .sort((x, y) => y.score - x.score || x.champion.localeCompare(y.champion))
     .slice(0, limit);
   const team = teamOf(g, step.turn);
@@ -516,19 +527,111 @@ export function suggestStep(m: Model, series: Series, pool: string[], limit = 5,
       unsure.push({ team: t, champion: c, roles: ROLES.filter((r) => d[r] >= 0.15).map((r) => ({ role: r, p: d[r] })).sort((x, y) => y.p - x.p) });
     }
   }
-  return { index, step, team, side, assumed, unsure, items };
+  // Xác suất đường đang xét còn trống ở đội sẽ có tướng (pick: đội mình, ban: đối thủ).
+  const laneOpen = lane ? (step.kind === "pick" ? ctx.allyDist : ctx.enemyDist).open[lane] : null;
+  return { index, step, team, side, assumed, unsure, items, lane, laneOpen };
 }
 
 /** Gợi ý cho lượt hiện tại và lượt kế tiếp (giả định lượt hiện tại chọn gợi ý số 1). */
-export function suggestNext(m: Model, series: Series, pool: string[], limit = 5): StepSuggestions[] {
-  const first = suggestStep(m, series, pool, limit);
+export function suggestNext(m: Model, series: Series, pool: string[], limit = 5, lane: Role | null = null): StepSuggestions[] {
+  const first = suggestStep(m, series, pool, limit, null, lane);
   if (!first) return [];
   const out = [first];
   const top = first.items[0]?.champion;
   if (top) {
     const s2 = act(series, top);
-    const second = suggestStep(m, s2, pool, limit, top);
+    const second = suggestStep(m, s2, pool, limit, top, lane);
     if (second) out.push(second);
   }
   return out;
+}
+
+export interface WinPart {
+  label: string;
+  blue: number; // đóng góp cho phe xanh, đơn vị xác suất (0.03 = +3%)
+  detail?: string;
+}
+
+export interface WinPrediction {
+  blue: number; // xác suất phe xanh thắng
+  picks: number; // số tướng đã pick (tối đa 10)
+  parts: WinPart[];
+}
+
+const sigmoid = (x: number) => 1 / (1 + Math.exp(-x));
+export const W_CHAMP = 0.25;
+export const W_DRAFT = 0.05;
+
+/**
+ * Ước lượng % thắng của hai phe theo các tướng đã pick: lợi thế phe xanh trong dữ liệu, tỉ lệ thắng
+ * của từng tướng (làm mượt), hợp đồng đội từng cặp, và đối đầu (cùng đường theo xác suất vai trò, còn lại
+ * theo cả trận). Các phần cộng lại theo thang xác suất rồi đưa qua hàm logistic để không vượt 5–95%.
+ */
+export function predictWin(m: Model, g: DraftGame): WinPrediction | null {
+  return predictPicks(m, picksOfSide(g, "blue"), picksOfSide(g, "red"));
+}
+
+/** Như predictWin nhưng nhận thẳng danh sách tướng của hai phe. */
+export function predictPicks(m: Model, blue: string[], red: string[]): WinPrediction | null {
+  if (!blue.length && !red.length) return null;
+  const bd = roleDist(m, blue);
+  const rd = roleDist(m, red);
+
+  const sideAdv = (m.blueWins + PRIOR_WR * 0.5) / (m.decided + PRIOR_WR) - 0.5;
+  const champ = (team: string[]) => team.reduce((s, c) => s + smoothedWr(m.champs.get(norm(c))) - 0.5, 0);
+  const syn = (team: string[]) => {
+    let s = 0;
+    for (let i = 0; i < team.length; i++)
+      for (let j = i + 1; j < team.length; j++) {
+        const a = norm(team[i]), b = norm(team[j]);
+        const p = m.pairs.get(pairKey(a, b));
+        if (!p || p.raw < 3) continue;
+        const exp = (smoothedWr(m.champs.get(a)) + smoothedWr(m.champs.get(b))) / 2;
+        s += (p.wins + PRIOR_PAIR * exp) / (p.n + PRIOR_PAIR) - exp;
+      }
+    return s;
+  };
+  // Lợi thế đối đầu của a (đội A) trước b: trung bình hai chiều dữ liệu (a thắng b, b thua a).
+  const edge = (a: string, b: string, pa: Record<Role, number>, pb: Record<Role, number>) => {
+    const wa = smoothedWr(m.champs.get(a)), wb = smoothedWr(m.champs.get(b));
+    const d = (p: PairAgg | undefined, base: number) => (p && p.raw >= 3 ? (p.wins + PRIOR_PAIR * base) / (p.n + PRIOR_PAIR) - base : null);
+    let laneW = 0, laneD = 0;
+    for (const r of ROLES) {
+      const w = pa[r] * pb[r];
+      if (w < 0.05) continue;
+      const x = d(m.lanes.get(`${r}|${a}|${b}`), wa);
+      const y = d(m.lanes.get(`${r}|${b}|${a}`), wb);
+      if (x === null && y === null) continue;
+      laneW += w;
+      laneD += w * ((x ?? 0) - (y ?? 0)) / (x !== null && y !== null ? 2 : 1);
+    }
+    const x = d(m.vs.get(`${a}|${b}`), wa);
+    const y = d(m.vs.get(`${b}|${a}`), wb);
+    const vs = x === null && y === null ? 0 : ((x ?? 0) - (y ?? 0)) / (x !== null && y !== null ? 2 : 1);
+    return { lane: laneD, laneW, vs: (1 - Math.min(1, laneW)) * vs };
+  };
+  let lane = 0, cross = 0;
+  const notes: string[] = [];
+  for (const a of blue)
+    for (const b of red) {
+      const ka = norm(a), kb = norm(b);
+      const e = edge(ka, kb, bd.champs.get(ka)!, rd.champs.get(kb)!);
+      lane += e.lane;
+      cross += e.vs;
+      if (e.laneW >= 0.3 && Math.abs(e.lane / e.laneW) >= 0.04) notes.push(`${a} vs ${b} ${e.lane >= 0 ? "+" : "−"}${Math.abs(100 * e.lane / e.laneW).toFixed(0)}%`);
+    }
+
+  // Trọng số chọn theo kiểm tra ngoài mẫu trên dữ liệu Tier 1 2026 (dựng mô hình bằng các ván trước một mốc,
+  // đo trên các ván sau mốc): tỉ lệ thắng của tướng có ích, còn hợp đồng đội và đối đầu chỉ thêm rất ít
+  // nên giữ trọng số nhỏ để % thắng không tự tin quá mức.
+  const parts: WinPart[] = [
+    { label: "Phe xanh/đỏ", blue: sideAdv, detail: `Phe xanh thắng ${((100 * m.blueWins) / Math.max(1, m.decided)).toFixed(0)}% trong ${m.decided} ván` },
+    { label: "Sức mạnh tướng", blue: W_CHAMP * (champ(blue) - champ(red)) },
+    { label: "Hợp đồng đội", blue: W_DRAFT * (syn(blue) - syn(red)) },
+    { label: "Đối đầu cùng đường", blue: W_DRAFT * lane, detail: notes.slice(0, 4).join(", ") || undefined },
+    { label: "Đối đầu cả trận", blue: W_DRAFT * cross },
+  ];
+  const total = parts.reduce((s, p) => s + p.blue, 0);
+  const p = Math.min(0.95, Math.max(0.05, sigmoid(4 * total)));
+  return { blue: p, picks: blue.length + red.length, parts };
 }

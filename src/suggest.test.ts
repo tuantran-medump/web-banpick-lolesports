@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { act, newSeries, nextGame, type Series } from "./draft";
 import { DEFAULT_FILTERS, type Filters } from "./filters";
-import { assignRoles, buildModel, roleDist, smoothedWr, suggestNext, suggestStep } from "./suggest";
+import { assignRoles, buildModel, predictPicks, predictWin, roleDist, smoothedWr, suggestNext, suggestStep } from "./suggest";
 import type { Game, Side, TeamSide } from "./types";
 
 const ROLES = ["top", "jng", "mid", "bot", "sup"] as const;
@@ -145,5 +145,45 @@ describe("tướng đa vai trò", () => {
     expect(vi.roles[0].role).toBe("jng");
     expect(st.unsure.map((u) => u.champion)).toEqual(["Gragas"]);
     expect(st.unsure[0].roles.map((r) => r.role).sort()).toEqual(["jng", "top"]);
+  });
+});
+
+describe("gợi ý theo lane", () => {
+  it("chỉ gợi ý tướng đi được đường đó", () => {
+    const m = buildModel(games, DEFAULT_FILTERS);
+    let s: Series = newSeries();
+    for (let i = 0; i < 6; i++) s = act(s, null);
+    const st = suggestStep(m, s, POOL, 20, null, "mid")!;
+    expect(st.lane).toBe("mid");
+    expect(st.items.map((x) => x.champion).sort()).toEqual(["Azir", "Orianna"]);
+    expect(st.items.every((x) => x.roles[0].role === "mid")).toBe(true);
+  });
+
+  it("báo khi đội đã có tướng ở đường đó", () => {
+    const m = buildModel(games, DEFAULT_FILTERS);
+    let s: Series = newSeries();
+    for (let i = 0; i < 6; i++) s = act(s, null);
+    s = act(s, "Azir");
+    s = act(s, "Jax");
+    s = act(s, "Leona");
+    const st = suggestStep(m, s, POOL, 20, null, "mid")!; // đội có Azir chọn tiếp
+    expect(st.laneOpen!).toBeLessThan(0.1);
+  });
+});
+
+describe("% thắng dự đoán", () => {
+  const m = buildModel(games, DEFAULT_FILTERS);
+  it("chưa pick ai thì chưa dự đoán", () => {
+    expect(predictWin(m, newSeries().games[0])).toBeNull();
+  });
+  it("đội hình thắng nhiều hơn được dự đoán cao hơn, trong khoảng 5–95%", () => {
+    const t1 = ["Gnar", "Vi", "Azir", "Varus", "Rell"]; // thắng 9/12 ván
+    const gen = ["Jax", "Sejuani", "Orianna", "Ezreal", "Leona"];
+    const p = predictPicks(m, t1, gen)!;
+    expect(p.blue).toBeGreaterThan(0.5);
+    expect(p.blue).toBeLessThanOrEqual(0.95);
+    expect(p.picks).toBe(10);
+    const q = predictPicks(m, gen, t1)!;
+    expect(q.blue).toBeLessThan(p.blue);
   });
 });
