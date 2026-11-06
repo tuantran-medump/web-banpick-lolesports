@@ -289,3 +289,16 @@ footer p { margin: 0 0 6px; }
 .roles-cell small { color: var(--muted); font-size: 11px; }
 .roles-cell .alt-role { white-space: nowrap; }
 .flex-note { margin: 0 0 6px; }
+
+/* % thắng dự đoán và gợi ý theo lane */
+.win { margin: 8px 0 4px; }
+.win-head { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; margin-bottom: 4px; }
+.win-bar { display: flex; height: 26px; border-radius: 8px; overflow: hidden; font-size: 12px; font-weight: 700; }
+.wb { display: flex; align-items: center; padding: 0 8px; color: #fff; white-space: nowrap; overflow: hidden; min-width: 0; transition: width .3s; }
+.wb.blue { background: var(--blue); }
+.wb.red { background: var(--red); justify-content: flex-end; }
+@media (prefers-reduced-motion: reduce) { .wb { transition: none; } }
+.win-parts { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 2px 16px; }
+.win-parts b.blue { color: var(--blue); }
+.win-parts b.red { color: var(--red); }
+.lane-seg { margin-top: 10px; flex-wrap: wrap; }
