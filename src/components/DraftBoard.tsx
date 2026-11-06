@@ -5,8 +5,11 @@ import {
   parseSeries, resetGame, setup, sideOf, sideOfTurn, slotsOf, teamOf, undo,
   type DraftGame, type Series, type TeamIdx,
 } from "../draft";
+import type { Filters } from "../filters";
 import { mainRole, type Summary } from "../stats";
-import { ROLES, type Role, type Side } from "../types";
+import { buildModel, suggestNext } from "../suggest";
+import { ROLES, type Game, type Role, type Side } from "../types";
+import { SuggestPanel } from "./SuggestPanel";
 
 const KEY = "draft-series-v1";
 const ROLE_NAMES: Record<Role, string> = { top: "Top", jng: "Rừng", mid: "Giữa", bot: "AD", sup: "Hỗ trợ" };
@@ -71,9 +74,11 @@ interface Props {
   dd: DDragon | null;
   summary: Summary;
   scope: string;
+  games: Game[];
+  filters: Filters;
 }
 
-export function DraftBoard({ dd, summary, scope }: Props) {
+export function DraftBoard({ dd, summary, scope, games, filters }: Props) {
   const [series, setSeries] = useState<Series>(load);
   const [q, setQ] = useState("");
   const [role, setRole] = useState<Role | "">("");
@@ -105,6 +110,10 @@ export function DraftBoard({ dd, summary, scope }: Props) {
     if (dd?.champions.length) return dd.champions.map((c) => c.name);
     return summary.champions.map((c) => c.champion).sort((a, b) => a.localeCompare(b));
   }, [dd, summary]);
+
+  // Gợi ý cho lượt hiện tại và lượt kế tiếp, theo cùng bộ lọc với tab Thống kê.
+  const model = useMemo(() => buildModel(games, filters), [games, filters]);
+  const suggestions = useMemo(() => suggestNext(model, series, pool), [model, series, pool]);
 
   const list = useMemo(() => {
     const qq = norm(q);
@@ -210,6 +219,8 @@ export function DraftBoard({ dd, summary, scope }: Props) {
           )}
         </div>
       </div>
+
+      <SuggestPanel dd={dd} series={series} steps={suggestions} samples={summary.games} onChoose={(c) => choose(c)} />
 
       <div className="draft-board">
         <TeamColumn series={series} g={g} side="blue" dd={dd} />

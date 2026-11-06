@@ -108,7 +108,7 @@ export default function App() {
       {error && <div className="alert">Lỗi: {error}</div>}
       {!index && !error && <div className="loading">Đang tải danh sách giải…</div>}
 
-      {view === "draft" && <DraftBoard dd={dd} summary={summary} scope={scope} />}
+      {view === "draft" && <DraftBoard dd={dd} summary={summary} scope={scope} games={games} filters={effective} />}
 
       {index && view === "stats" && (
         <>
