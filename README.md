@@ -18,6 +18,16 @@ Workflow `.github/workflows/update-data.yml` thử 3 tiếng một lần, mỗi 
 3. `scripts/oe_check.py` chặn ghi đè nếu số game của một năm giảm quá 10% (file tải về bị lỗi).
 4. Ghi `public/data/meta.json` (ngày cập nhật) và commit vào `main`.
 
+CSV của lần tải thành công gần nhất được giữ trong cache của Actions: năm nào hôm nay không tải được thì dùng lại bản cũ.
+Không lấy được từ cả hai nguồn thì workflow chỉ cảnh báo và giữ nguyên dữ liệu.
+
+### Tự đưa CSV lên (khi workflow không tự tải được)
+
+1. Tải file CSV từ trang Oracle's Elixir về máy, nén thành `.zip` (GitHub web chỉ nhận file dưới 25 MB).
+2. Trên GitHub, mở nhánh `main`, chọn "Add file" > "Upload files", đặt file vào thư mục `manual/`
+   (gõ `manual/` trước tên file). Tên file cần có năm, ví dụ `2026.zip`.
+3. Commit. Workflow tự chạy, chuyển đổi, commit dữ liệu mới và xóa file trong `manual/`.
+
 Có thể chạy tay ở tab Actions, mục "Run workflow", và nhập năm (ví dụ `2024 2025 2026`).
 
 ### Quy ước

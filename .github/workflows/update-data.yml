@@ -11,6 +11,10 @@ on:
         description: "Các năm cần tải, cách nhau bằng dấu cách (để trống = năm trước và năm nay)"
         required: false
         default: ""
+  push:
+    # Tự đưa CSV (hoặc .zip) lên thư mục manual/ thì workflow chuyển đổi rồi xóa file đó đi
+    branches: [main]
+    paths: ["manual/**"]
   pull_request:
     paths:
       - "scripts/**"
@@ -44,11 +48,20 @@ jobs:
           today=$(date -u +%Y-%m-%d)
           last=$(python -c "import json;print(json.load(open('public/data/meta.json'))['updated'])" 2>/dev/null || echo "")
           echo "Lần cập nhật gần nhất: ${last:-chưa có}"
-          echo "last=$last" >> "$GITHUB_OUTPUT"
           if [ "${{ github.event_name }}" = "schedule" ] && [ "$last" = "$today" ]; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
             echo "Hôm nay đã cập nhật, bỏ qua."
           fi
+
+      # CSV của lần tải thành công gần nhất được giữ trong cache. Năm nào hôm nay không tải
+      # được thì dùng lại bản cũ, nên dữ liệu các năm khác không bị mất.
+      - name: Lấy CSV đã lưu
+        if: steps.today.outputs.skip != 'true'
+        uses: actions/cache/restore@v4
+        with:
+          path: raw
+          key: oe-csv-${{ github.run_id }}
+          restore-keys: oe-csv-
 
       - name: Chọn năm
         if: steps.today.outputs.skip != 'true'
@@ -63,7 +76,7 @@ jobs:
           echo "Năm: $years"
           echo "years=$years" >> "$GITHUB_OUTPUT"
 
-      - name: Tải CSV từ Oracle's Elixir
+      - name: Lấy CSV (tự đưa lên hoặc tải từ Oracle's Elixir)
         if: steps.today.outputs.skip != 'true'
         id: download
         env:
@@ -72,19 +85,24 @@ jobs:
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
           YEARS: ${{ steps.years.outputs.years }}
         run: |
-          python scripts/oe_download.py $YEARS --dir raw --optional
-          if ls raw/*.csv > /dev/null 2>&1; then
-            ls -l raw
+          mkdir -p raw
+          (cd raw && md5sum *.csv 2>/dev/null) > before.md5 || true
+          if [ "${{ github.event_name }}" = "push" ]; then
+            python scripts/oe_manual.py manual raw
+          else
+            python scripts/oe_download.py $YEARS --dir raw --optional
+          fi
+          (cd raw && md5sum *.csv 2>/dev/null) > after.md5 || true
+          ls -l raw
+          if ! cmp -s before.md5 after.md5 && [ -s after.md5 ]; then
             echo "ok=true" >> "$GITHUB_OUTPUT"
           else
-            echo "::warning::Không tải được CSV của Oracle's Elixir (Google giới hạn lượt tải), dùng Leaguepedia dự phòng."
+            echo "::warning::Hôm nay chưa có CSV mới của Oracle's Elixir, thử Leaguepedia."
           fi
 
       - name: Dự phòng Leaguepedia
         if: steps.today.outputs.skip != 'true' && steps.download.outputs.ok != 'true'
         id: lp
-        env:
-          LAST: ${{ steps.today.outputs.last }}
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             args="--out build/lp-test"   # PR: chỉ chạy thử, không đụng public/data
@@ -103,14 +121,12 @@ jobs:
             exit 0
           fi
           cat lp-report.txt
-          # Theo lịch: chỉ báo lỗi khi đã hơn 2 ngày không cập nhật được, tránh báo lỗi 8 lần/ngày
-          if [ "${{ github.event_name }}" = "schedule" ] && [ -n "$LAST" ] \
-             && [ "$LAST" \> "$(date -u -d '2 days ago' +%Y-%m-%d)" ]; then
-            echo "::warning::Leaguepedia cũng lỗi, sẽ thử lại lần sau."
-            exit 0
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "::error::Không lấy được dữ liệu từ cả Oracle's Elixir và Leaguepedia"
+            exit 1
           fi
-          echo "::error::Không lấy được dữ liệu từ cả Oracle's Elixir và Leaguepedia"
-          exit 1
+          # Không lấy được từ cả hai nguồn: giữ nguyên dữ liệu, chờ lần sau hoặc chờ bạn tự đưa CSV lên manual/
+          echo "::warning::Leaguepedia cũng lỗi. Giữ nguyên dữ liệu cũ, sẽ thử lại lần sau."
 
       - name: Chuyển CSV sang JSON
         if: steps.download.outputs.ok == 'true'
@@ -130,12 +146,22 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Lưu CSV vào cache
+        if: steps.download.outputs.ok == 'true' && github.event_name != 'pull_request'
+        uses: actions/cache/save@v4
+        with:
+          path: raw
+          key: oe-csv-${{ github.run_id }}
+
       - name: Commit dữ liệu mới
         if: github.event_name != 'pull_request' && (steps.download.outputs.ok == 'true' || steps.lp.outputs.ok == 'true')
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A public/data
+          if [ "${{ github.event_name }}" = "push" ] && [ -d manual ]; then
+            git rm -rq --ignore-unmatch manual   # file tự đưa lên đã dùng xong
+          fi
           if git diff --cached --quiet; then
             echo "Dữ liệu không đổi, không commit."
             exit 0
