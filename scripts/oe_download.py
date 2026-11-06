@@ -113,7 +113,7 @@ def _try(url, path, label):
 def download_drive(file_id, path):
     """Thử lần lượt: Drive API (nếu có GOOGLE_API_KEY), rồi hai link tải công khai.
     File của Oracle's Elixir hay bị Google báo "Quota exceeded" ở link công khai vì quá
-    nhiều người tải; Drive API dùng hạn mức riêng nên thường vẫn tải được."""
+    nhiều người tải; hạn mức này tính chung cho cả Drive API, nên workflow thử lại nhiều lần trong ngày."""
     key = os.environ.get("GOOGLE_API_KEY")
     tries = []
     if key:

@@ -6,14 +6,14 @@ Web mô phỏng ban/pick cho LoL chuyên nghiệp (có Fearless), gợi ý ban/p
 
 Nguồn: [Oracle's Elixir](https://oracleselixir.com) (file CSV theo năm). Nhớ ghi nguồn trên web.
 
-Workflow `.github/workflows/update-data.yml` chạy mỗi ngày lúc 13:30 giờ Việt Nam:
+Workflow `.github/workflows/update-data.yml` thử 3 tiếng một lần, mỗi ngày cập nhật một lần (Google hay giới hạn lượt tải file của Oracle's Elixir, nên cần thử nhiều lần). Chỉ báo lỗi khi đã hơn 2 ngày không tải được.
 
 1. `scripts/oe_download.py` tải CSV của năm trước và năm nay từ thư mục Google Drive của Oracle's Elixir.
 2. `scripts/oe_convert.py` chuyển CSV thành JSON trong `public/data/`:
    - `public/data/index.json`: danh sách giải (tier, số game, số series, các phiên bản) và danh sách phiên bản.
    - `public/data/<năm>/<giải>.json`: từng game với ban/pick, thứ tự draft 20 lượt, series và danh sách tướng đã dùng (Fearless).
 3. `scripts/oe_check.py` chặn ghi đè nếu số game của một năm giảm quá 10% (file tải về bị lỗi).
-4. Có thay đổi thì commit vào `main`.
+4. Ghi `public/data/meta.json` (ngày cập nhật) và commit vào `main`.
 
 Có thể chạy tay ở tab Actions, mục "Run workflow", và nhập năm (ví dụ `2024 2025 2026`).
 
@@ -33,7 +33,7 @@ Có thể chạy tay ở tab Actions, mục "Run workflow", và nhập năm (ví
 ### Khóa Google Drive API (secret `GOOGLE_API_KEY`)
 
 File của Oracle's Elixir rất nhiều người tải nên link Drive công khai hay bị Google báo
-"Quota exceeded". Drive API dùng hạn mức riêng, nên nên thêm một khóa API:
+"Quota exceeded". Có thể thêm khóa Drive API để có thêm một đường tải (lưu ý: thử ngày 2026-11-06 thì Drive API cũng bị giới hạn chung với link công khai):
 
 1. Vào https://console.cloud.google.com, tạo project (miễn phí).
 2. "APIs & Services" > "Library", bật **Google Drive API**.

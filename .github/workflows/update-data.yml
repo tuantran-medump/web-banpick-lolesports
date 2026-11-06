@@ -2,7 +2,9 @@ name: Cập nhật dữ liệu Oracle's Elixir
 
 on:
   schedule:
-    - cron: "30 6 * * *" # mỗi ngày 13:30 giờ Việt Nam
+    # Google hay báo "Quota exceeded" với file của Oracle's Elixir, nên thử 3 tiếng một lần.
+    # Hôm nay đã tải được rồi thì các lần sau tự bỏ qua.
+    - cron: "15 */3 * * *"
   workflow_dispatch:
     inputs:
       years:
@@ -36,7 +38,20 @@ jobs:
       - name: Chạy test
         run: python -m unittest discover -s tests -v
 
+      - name: Hôm nay đã cập nhật chưa
+        id: today
+        run: |
+          today=$(date -u +%Y-%m-%d)
+          last=$(python -c "import json;print(json.load(open('public/data/meta.json'))['updated'])" 2>/dev/null || echo "")
+          echo "Lần cập nhật gần nhất: ${last:-chưa có}"
+          echo "last=$last" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.event_name }}" = "schedule" ] && [ "$last" = "$today" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "Hôm nay đã cập nhật, bỏ qua."
+          fi
+
       - name: Chọn năm
+        if: steps.today.outputs.skip != 'true'
         id: years
         env:
           INPUT_YEARS: ${{ github.event.inputs.years }}
@@ -49,17 +64,32 @@ jobs:
           echo "years=$years" >> "$GITHUB_OUTPUT"
 
       - name: Tải CSV từ Oracle's Elixir
+        if: steps.today.outputs.skip != 'true'
+        id: download
         env:
           OE_DRIVE_FOLDER_ID: ${{ vars.OE_DRIVE_FOLDER_ID }}
           OE_FILE_IDS: ${{ vars.OE_FILE_IDS }}
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
           YEARS: ${{ steps.years.outputs.years }}
+          LAST: ${{ steps.today.outputs.last }}
         run: |
           python scripts/oe_download.py $YEARS --dir raw --optional
-          ls raw/*.csv > /dev/null 2>&1 || { echo "::error::Không tải được file CSV nào"; exit 1; }
-          ls -l raw
+          if ls raw/*.csv > /dev/null 2>&1; then
+            ls -l raw
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Lần chạy theo lịch: chỉ báo lỗi khi đã hơn 2 ngày không tải được, tránh báo lỗi 8 lần/ngày
+          if [ "${{ github.event_name }}" = "schedule" ] && [ -n "$LAST" ] \
+             && [ "$LAST" \> "$(date -u -d '2 days ago' +%Y-%m-%d)" ]; then
+            echo "::warning::Chưa tải được (Google giới hạn lượt tải), sẽ thử lại lần sau."
+            exit 0
+          fi
+          echo "::error::Không tải được file CSV nào"
+          exit 1
 
       - name: Chuyển CSV sang JSON
+        if: steps.download.outputs.ok == 'true'
         run: |
           python scripts/oe_convert.py raw/*.csv --out build/data 2> build-report.txt || { cat build-report.txt; exit 1; }
           cat build-report.txt
@@ -67,6 +97,7 @@ jobs:
           rm -rf public/data
           mkdir -p public
           mv build/data public/data
+          python scripts/oe_meta.py raw public/data/meta.json
           du -sh public/data
           {
             echo '## Báo cáo dữ liệu'
@@ -76,7 +107,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Commit dữ liệu mới
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && steps.download.outputs.ok == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -94,5 +125,5 @@ jobs:
           exit 1
 
       - name: Xem trước thay đổi (PR, không commit)
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && steps.download.outputs.ok == 'true'
         run: git status --short public/data | head -50
