@@ -1,0 +1,21 @@
+{
+ "_doc": "Xếp tier theo cột 'league' của Oracle's Elixir (mã viết tắt). So khớp không phân biệt hoa thường, khớp nguyên mã. Mã không có trong danh sách -> default. Khi chạy oe_convert.py, script in ra mọi mã giải gặp được kèm tier để bạn kiểm tra; mã nào thiếu thì thêm vào đây.",
+ "default": "2",
+ "tiers": {
+  "1": {
+   "LCK": ["LCK"],
+   "LPL": ["LPL"],
+   "LEC": ["LEC"],
+   "First Stand": ["FST", "First Stand"],
+   "MSI": ["MSI"],
+   "Worlds": ["WLDs", "Worlds", "WCS"],
+   "EWC": ["EWC"]
+  },
+  "1.5": {
+   "LCP": ["LCP"],
+   "LCS": ["LCS"],
+   "CBLOL": ["CBLOL"],
+   "Demacia Cup": ["DCup", "DC", "Demacia Cup", "DEMACIA"]
+  }
+ }
+}
