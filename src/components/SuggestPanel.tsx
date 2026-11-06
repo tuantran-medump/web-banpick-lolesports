@@ -2,6 +2,7 @@ import { useState } from "react";
 import { champIcon, type DDragon } from "../ddragon";
 import type { Series } from "../draft";
 import type { StepSuggestions } from "../suggest";
+import { useNarrow } from "../theme";
 import type { Role, Side } from "../types";
 
 const ROLE_NAMES: Record<Role, string> = { top: "Top", jng: "Rừng", mid: "Giữa", bot: "AD", sup: "Hỗ trợ" };
@@ -19,6 +20,8 @@ interface Props {
 /** Gợi ý cho lượt hiện tại và lượt kế tiếp, mỗi tướng kèm lý do. */
 export function SuggestPanel({ dd, series, steps, samples, onChoose }: Props) {
   const [open, setOpen] = useState<string | null>(null);
+  // Điện thoại: mỗi tướng chỉ hiện 1 lý do, bấm để xem thêm.
+  const keep = useNarrow() ? 1 : 2;
   const [hidden, setHidden] = useState(() => {
     try {
       return localStorage.getItem(HIDE_KEY) === "1";
@@ -56,7 +59,7 @@ export function SuggestPanel({ dd, series, steps, samples, onChoose }: Props) {
             <ol className="suggest-list">
               {st.items.map((x, i) => {
                 const key = `${st.index}|${x.champion}`;
-                const shown = open === key ? x.reasons : x.reasons.slice(0, 2);
+                const shown = open === key ? x.reasons : x.reasons.slice(0, keep);
                 return (
                   <li key={x.champion} className="suggest-item">
                     <button type="button" className="suggest-pick" disabled={si > 0}
@@ -77,9 +80,9 @@ export function SuggestPanel({ dd, series, steps, samples, onChoose }: Props) {
                         <li key={j} className={r.points >= 0 ? "up" : "down"}>{r.text}</li>
                       ))}
                     </ul>
-                    {x.reasons.length > 2 && (
+                    {x.reasons.length > keep && (
                       <button type="button" className="more-link small" onClick={() => setOpen(open === key ? null : key)}>
-                        {open === key ? "Thu gọn" : `+${x.reasons.length - 2} lý do`}
+                        {open === key ? "Thu gọn" : `+${x.reasons.length - keep} lý do`}
                       </button>
                     )}
                   </li>

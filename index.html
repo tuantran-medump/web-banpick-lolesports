@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content="Thống kê ban/pick tướng LoL chuyên nghiệp theo giải, phiên bản, phe và đội." />
     <title>Banpick LoL</title>
+    <script>
+      // Áp giao diện đã chọn trước khi vẽ trang để không bị nháy màu.
+      try { var t = localStorage.getItem("theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>
