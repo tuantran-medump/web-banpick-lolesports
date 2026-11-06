@@ -11,6 +11,10 @@ và chỉ tải những giải cần cho bộ lọc đang chọn.
   Bộ lọc được ghi lên URL (phần sau dấu `#`), gửi link là người khác thấy đúng bảng đó.
 - Bảng tướng: presence, số pick và tỉ lệ pick, số ban và tỉ lệ ban, tỉ lệ thắng, số pick ở phe xanh/đỏ, số lần là pick đầu tiên.
   Bấm tiêu đề cột để sắp xếp. Khi lọc theo đội hoặc phe, mọi số liệu tính theo góc nhìn đội/phe đó và có thêm cột "Bị cấm" (đối thủ cấm tướng này).
+- Bàn draft (tab "Bàn draft", link `#view=draft`): 20 lượt theo thứ tự 2026, đội pick trước cũng ban trước dù ở phe nào.
+  Chọn đội nào ở phe xanh và đội nào pick trước cho từng ván. Có bỏ lượt cấm, hoàn tác, làm lại ván.
+  Chế độ Fearless (Bo1/Bo3/Bo5): tướng đã pick ở ván trước bị khóa cho cả hai đội (tướng bị ban thì không).
+  Lọc tướng theo vai trò và xếp theo presence, lấy từ bộ lọc ở tab Thống kê. Series được lưu trong trình duyệt.
 - Ảnh tướng lấy từ Data Dragon của Riot (bản mới nhất), lưu trong trình duyệt một ngày.
 
 Chạy trên máy (cần Node 22):
