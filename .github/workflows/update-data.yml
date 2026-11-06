@@ -1,0 +1,97 @@
+name: Cập nhật dữ liệu Oracle's Elixir
+
+on:
+  schedule:
+    - cron: "30 6 * * *" # mỗi ngày 13:30 giờ Việt Nam
+  workflow_dispatch:
+    inputs:
+      years:
+        description: "Các năm cần tải, cách nhau bằng dấu cách (để trống = năm trước và năm nay)"
+        required: false
+        default: ""
+  pull_request:
+    paths:
+      - "scripts/**"
+      - "tests/**"
+      - ".github/workflows/update-data.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-data-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Chạy test
+        run: python -m unittest discover -s tests -v
+
+      - name: Chọn năm
+        id: years
+        env:
+          INPUT_YEARS: ${{ github.event.inputs.years }}
+          VAR_YEARS: ${{ vars.OE_YEARS }}
+        run: |
+          y=$(date -u +%Y)
+          years="${INPUT_YEARS:-${VAR_YEARS:-$((y - 1)) $y}}"
+          [[ "$years" =~ ^[0-9\ ]+$ ]] || { echo "::error::Danh sách năm không hợp lệ: $years"; exit 1; }
+          echo "Năm: $years"
+          echo "years=$years" >> "$GITHUB_OUTPUT"
+
+      - name: Tải CSV từ Oracle's Elixir
+        env:
+          OE_DRIVE_FOLDER_ID: ${{ vars.OE_DRIVE_FOLDER_ID }}
+          OE_FILE_IDS: ${{ vars.OE_FILE_IDS }}
+          YEARS: ${{ steps.years.outputs.years }}
+        run: |
+          python scripts/oe_download.py $YEARS --dir raw --optional
+          ls raw/*.csv > /dev/null 2>&1 || { echo "::error::Không tải được file CSV nào"; exit 1; }
+          ls -l raw
+
+      - name: Chuyển CSV sang JSON
+        run: |
+          python scripts/oe_convert.py raw/*.csv --out build/data 2> build-report.txt || { cat build-report.txt; exit 1; }
+          cat build-report.txt
+          python scripts/oe_check.py public/data/index.json build/data/index.json
+          rm -rf public/data
+          mkdir -p public
+          mv build/data public/data
+          du -sh public/data
+          {
+            echo '## Báo cáo dữ liệu'
+            echo '```'
+            cat build-report.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Commit dữ liệu mới
+        if: github.event_name != 'pull_request'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A public/data
+          if git diff --cached --quiet; then
+            echo "Dữ liệu không đổi, không commit."
+            exit 0
+          fi
+          git commit -m "data: cập nhật Oracle's Elixir $(date -u +%Y-%m-%d)"
+          for i in 1 2 3 4; do
+            git push && exit 0
+            sleep $((2 ** i))
+            git pull --rebase
+          done
+          exit 1
+
+      - name: Xem trước thay đổi (PR, không commit)
+        if: github.event_name == 'pull_request'
+        run: git status --short public/data | head -50
