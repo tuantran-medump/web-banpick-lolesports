@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { champIcon, norm, type DDragon } from "../ddragon";
-import { mainRole, type ChampStat, type Summary } from "../stats";
+import { rolesOf, type ChampStat, type Summary } from "../stats";
 import type { Role } from "../types";
 
 const ROLE_NAMES: Record<Role, string> = { top: "Top", jng: "Rừng", mid: "Giữa", bot: "AD", sup: "Hỗ trợ" };
@@ -97,7 +97,7 @@ export function StatsTable({ summary, dd }: { summary: Summary; dd: DDragon | nu
           </thead>
           <tbody>
             {rows.map((s, i) => {
-              const role = mainRole(s);
+              const roles = rolesOf(s);
               const wr = pct(s.wins, s.picks);
               return (
                 <tr key={s.champion}>
@@ -108,7 +108,14 @@ export function StatsTable({ summary, dd }: { summary: Summary; dd: DDragon | nu
                       <span>{s.champion}</span>
                     </span>
                   </th>
-                  <td className="muted">{role ? ROLE_NAMES[role] : "–"}</td>
+                  <td className="muted roles-cell"
+                    title={roles.length > 1 ? roles.map((x) => `${ROLE_NAMES[x.role]} ${(100 * x.share).toFixed(0)}%`).join(", ") : undefined}>
+                    {roles.length ? roles.map((x, j) => (
+                      <span key={x.role} className={j ? "alt-role" : ""}>
+                        {j > 0 && " · "}{ROLE_NAMES[x.role]}{roles.length > 1 && <small> {(100 * x.share).toFixed(0)}%</small>}
+                      </span>
+                    )) : "–"}
+                  </td>
                   <td className="metric">
                     <span className="v">{fmt(pct(s.presence, n))}</span>
                     <Bar value={pct(s.presence, n)} />

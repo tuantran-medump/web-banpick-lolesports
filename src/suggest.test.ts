@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { act, newSeries, nextGame, type Series } from "./draft";
 import { DEFAULT_FILTERS, type Filters } from "./filters";
-import { assignRoles, buildModel, smoothedWr, suggestNext, suggestStep } from "./suggest";
+import { assignRoles, buildModel, roleDist, smoothedWr, suggestNext, suggestStep } from "./suggest";
 import type { Game, Side, TeamSide } from "./types";
 
 const ROLES = ["top", "jng", "mid", "bot", "sup"] as const;
@@ -104,5 +104,46 @@ describe("gợi ý", () => {
     s = nextGame(s);
     const st = suggestStep(m, s, POOL, 20)!;
     expect(st.items.map((x) => x.champion)).toEqual(["Ahri"]);
+  });
+});
+
+describe("tướng đa vai trò", () => {
+  // Gragas đi Top 6 ván và Rừng 6 ván.
+  const flex: Game[] = [...games];
+  for (let i = 0; i < 6; i++) {
+    flex.push(game(side("T1", true, ["Gragas", "Sejuani", "Azir", "Varus", "Rell"], BANS),
+      side("GEN", false, ["Jax", "Vi", "Orianna", "Ezreal", "Leona"], BANS)));
+    flex.push(game(side("T1", true, ["Gnar", "Gragas", "Azir", "Varus", "Rell"], BANS),
+      side("GEN", false, ["Jax", "Vi", "Orianna", "Ezreal", "Leona"], BANS)));
+  }
+  const m = buildModel(flex, DEFAULT_FILTERS);
+
+  it("chưa chốt đường khi đội chỉ có tướng đa vai trò", () => {
+    const d = roleDist(m, ["Gragas"]);
+    expect(d.champs.get("gragas")!.top).toBeCloseTo(0.5, 1);
+    expect(d.open.top).toBeCloseTo(0.5, 1);
+    expect(d.open.jng).toBeCloseTo(0.5, 1);
+    expect(d.open.mid).toBeCloseTo(1, 1);
+  });
+
+  it("suy ra đường còn lại khi đồng đội đã chiếm một đường", () => {
+    const d = roleDist(m, ["Gragas", "Vi"]);
+    expect(d.champs.get("gragas")!.top).toBeGreaterThan(0.95);
+    expect(d.open.top).toBeLessThan(0.05);
+    expect(d.open.jng).toBeLessThan(0.05);
+  });
+
+  it("không phạt tướng rừng khi đồng đội Gragas còn có thể đi Top", () => {
+    let s: Series = newSeries();
+    for (let i = 0; i < 6; i++) s = act(s, null);
+    s = act(s, "Gragas"); // đội pick trước
+    s = act(s, "Jax");
+    s = act(s, "Leona");
+    const st = suggestStep(m, s, [...POOL, "Gragas"], 20)!;
+    const vi = st.items.find((x) => x.champion === "Vi")!;
+    expect(vi.reasons.some((r) => r.text.includes("Không hợp vai trò"))).toBe(false);
+    expect(vi.roles[0].role).toBe("jng");
+    expect(st.unsure.map((u) => u.champion)).toEqual(["Gragas"]);
+    expect(st.unsure[0].roles.map((r) => r.role).sort()).toEqual(["jng", "top"]);
   });
 });

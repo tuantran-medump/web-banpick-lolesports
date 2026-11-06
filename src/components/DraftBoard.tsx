@@ -6,7 +6,7 @@ import {
   type DraftGame, type Series, type TeamIdx,
 } from "../draft";
 import type { Filters } from "../filters";
-import { mainRole, type Summary } from "../stats";
+import { rolesOf, type Summary } from "../stats";
 import { buildModel, suggestNext } from "../suggest";
 import { ROLES, type Game, type Role, type Side } from "../types";
 import { SuggestPanel } from "./SuggestPanel";
@@ -100,8 +100,8 @@ export function DraftBoard({ dd, summary, scope, games, filters }: Props) {
 
   // Thống kê theo bộ lọc hiện tại: vai trò chính và presence của từng tướng.
   const statOf = useMemo(() => {
-    const m = new Map<string, { role: Role | null; presence: number }>();
-    for (const s of summary.champions) m.set(norm(s.champion), { role: mainRole(s), presence: s.presence });
+    const m = new Map<string, { roles: Role[]; presence: number }>();
+    for (const s of summary.champions) m.set(norm(s.champion), { roles: rolesOf(s).map((x) => x.role), presence: s.presence });
     return m;
   }, [summary]);
 
@@ -119,7 +119,8 @@ export function DraftBoard({ dd, summary, scope, games, filters }: Props) {
     const qq = norm(q);
     const rows = pool
       .filter((c) => !qq || norm(c).includes(qq))
-      .filter((c) => !role || statOf.get(norm(c))?.role === role)
+      // Tướng đa vai trò hiện ở mọi vai trò nó đi từ 15% số lần pick trở lên.
+      .filter((c) => !role || statOf.get(norm(c))?.roles.includes(role))
       .map((c) => ({ name: c, av: availability(series, c), presence: statOf.get(norm(c))?.presence || 0 }))
       .filter((r) => !hideLocked || r.av.ok);
     if (sortBy === "presence") rows.sort((a, b) => b.presence - a.presence || a.name.localeCompare(b.name));

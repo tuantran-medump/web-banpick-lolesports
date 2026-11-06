@@ -132,6 +132,15 @@ export function mainRole(s: ChampStat): Role | null {
   return best;
 }
 
+/** Các vai trò tướng từng đi với tỉ lệ ≥ min (mặc định 15%), xếp giảm dần. Tướng đa vai trò có nhiều dòng. */
+export function rolesOf(s: ChampStat, min = 0.15): { role: Role; share: number }[] {
+  const tot = ROLES.reduce((a, r) => a + (s.roles[r] || 0), 0);
+  if (!tot) return [];
+  return ROLES.map((role) => ({ role, share: (s.roles[role] || 0) / tot }))
+    .filter((x) => x.share >= min)
+    .sort((a, b) => b.share - a.share);
+}
+
 /** Danh sách đội (kèm số game) trong các game khớp bộ lọc, không tính bộ lọc đội. */
 export function teamsOf(games: Game[], f: Filters): { team: string; games: number }[] {
   const c = new Map<string, number>();
