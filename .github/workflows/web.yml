@@ -1,0 +1,27 @@
+name: Kiểm tra web
+
+on:
+  pull_request:
+    paths-ignore:
+      - "public/data/**"
+      - "scripts/**"
+      - "manual/**"
+  push:
+    branches: [main]
+    paths-ignore:
+      - "public/data/**"
+      - "manual/**"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build

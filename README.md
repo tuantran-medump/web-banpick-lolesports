@@ -2,6 +2,42 @@
 
 Web mô phỏng ban/pick cho LoL chuyên nghiệp (có Fearless), gợi ý ban/pick theo dữ liệu thi đấu.
 
+## Web (giao diện)
+
+Vite + React + TypeScript, mã nguồn trong `src/`. Web đọc thẳng các file JSON trong `public/data/`
+và chỉ tải những giải cần cho bộ lọc đang chọn.
+
+- Bộ lọc: tier, giải, khoảng ngày, phiên bản, ván 1–5, vòng (vòng bảng/playoffs), phe (xanh, đỏ, đội pick trước, đội pick sau) và đội.
+  Bộ lọc được ghi lên URL (phần sau dấu `#`), gửi link là người khác thấy đúng bảng đó.
+- Bảng tướng: presence, số pick và tỉ lệ pick, số ban và tỉ lệ ban, tỉ lệ thắng, số pick ở phe xanh/đỏ, số lần là pick đầu tiên.
+  Bấm tiêu đề cột để sắp xếp. Khi lọc theo đội hoặc phe, mọi số liệu tính theo góc nhìn đội/phe đó và có thêm cột "Bị cấm" (đối thủ cấm tướng này).
+- Ảnh tướng lấy từ Data Dragon của Riot (bản mới nhất), lưu trong trình duyệt một ngày.
+
+Chạy trên máy (cần Node 22):
+
+```
+npm install
+npm run dev      # mở http://localhost:5173
+npm test
+npm run build    # ra thư mục dist/
+```
+
+### Đưa lên Cloudflare Pages (dùng được với repo private)
+
+1. Vào https://dash.cloudflare.com, mục **Workers & Pages** > **Create** > tab **Pages** > **Connect to Git**.
+2. Cho phép Cloudflare truy cập GitHub, chọn repo `web-banpick-lolesports`.
+3. Cấu hình build:
+   - Production branch: `main`
+   - Framework preset: `Vite` (hoặc chọn None rồi điền tay)
+   - Build command: `npm run build`
+   - Build output directory: `dist`
+   - Node lấy theo file `.node-version` (22), không cần thêm biến.
+4. Bấm **Save and Deploy**. Web có địa chỉ dạng `https://<tên-project>.pages.dev`.
+
+Mỗi lần workflow cập nhật dữ liệu commit vào `main`, Cloudflare tự build lại (Cloudflare tự theo dõi repo,
+không phụ thuộc GitHub Actions). Mỗi PR cũng có một link xem trước riêng.
+Muốn giới hạn người xem thì bật **Cloudflare Access** cho project (miễn phí tới 50 người).
+
 ## Dữ liệu
 
 Nguồn: [Oracle's Elixir](https://oracleselixir.com) (file CSV theo năm). Nhớ ghi nguồn trên web.

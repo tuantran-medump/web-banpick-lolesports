@@ -1,0 +1,5 @@
+# Cloudflare Pages: dữ liệu đổi mỗi ngày nên chỉ cache ngắn, file JS/CSS có hash nên cache lâu.
+/data/*
+  Cache-Control: public, max-age=600, must-revalidate
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
