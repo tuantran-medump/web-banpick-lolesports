@@ -205,6 +205,62 @@ def slug(s):
     return re.sub(r"[^A-Za-z0-9._-]+", "_", s or "unknown").strip("_") or "unknown"
 
 
+OE_SOURCE = "Oracle's Elixir (oracleselixir.com)"
+
+
+def group_by_file(games):
+    by_file = defaultdict(list)
+    for g in games:
+        by_file[(g["year"], g["league"])].append(g)
+    return by_file
+
+
+def league_file(year, league):
+    return f"{year}/{slug(league)}.json"
+
+
+def write_league_file(out, year, league, gs):
+    gs.sort(key=lambda g: (g["date"] or "", g["gameInSeries"] or 0, g["id"]))
+    path = os.path.join(out, league_file(year, league))
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    sources = [OE_SOURCE] + (["Leaguepedia (lol.fandom.com, CC BY-SA)"]
+                             if any(g.get("source") == "leaguepedia" for g in gs) else [])
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump({"source": " + ".join(sources), "league": league, "year": year, "games": gs},
+                  f, ensure_ascii=False, separators=(",", ":"))
+
+
+def write_index(out, games):
+    """Ghi index.json từ toàn bộ game (mọi giải, mọi năm)."""
+    index = []
+    for (year, league), gs in sorted(group_by_file(games).items(), key=lambda kv: (kv[0][0] or 0, kv[0][1] or "")):
+        gs.sort(key=lambda g: (g["date"] or "", g["gameInSeries"] or 0, g["id"]))
+        index.append({"league": league, "year": year, "tier": gs[0]["tier"], "file": league_file(year, league),
+                      "games": len(gs), "series": len({g["seriesId"] for g in gs}),
+                      "leaguepediaGames": sum(g.get("source") == "leaguepedia" for g in gs),
+                      "firstDate": gs[0]["date"], "lastDate": gs[-1]["date"],
+                      "maxGameInSeries": max(g["gameInSeries"] or 0 for g in gs),
+                      "patches": dict(sorted(Counter(g["patchLabel"] for g in gs if g["patchLabel"]).items(),
+                                             key=lambda kv: patch_key(kv[0])))})
+    # Danh sách phiên bản: số game, ngày đầu/cuối (dùng cho bộ lọc và trọng số theo độ mới)
+    pv = {}
+    for g in games:
+        lb = g["patchLabel"]
+        if not lb:
+            continue
+        e = pv.setdefault(lb, {"patch": lb, "internal": g["patch"], "games": 0, "tier1Games": 0,
+                               "firstDate": g["date"], "lastDate": g["date"]})
+        e["games"] += 1
+        e["tier1Games"] += g["tier"] == "1"
+        e["firstDate"] = min(e["firstDate"], g["date"])
+        e["lastDate"] = max(e["lastDate"], g["date"])
+    patches = sorted(pv.values(), key=lambda e: patch_key(e["patch"]), reverse=True)
+    os.makedirs(out, exist_ok=True)
+    with open(os.path.join(out, "index.json"), "w", encoding="utf-8") as f:
+        json.dump({"source": OE_SOURCE, "patches": patches, "leagues": index}, f, ensure_ascii=False, indent=1)
+    return index, patches
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("csv", nargs="+", help="file CSV của Oracle's Elixir")
@@ -233,42 +289,9 @@ def main():
         sys.exit("Không có game nào hợp lệ trong file CSV, dừng lại để không ghi đè dữ liệu cũ.")
     assign_series(games)
 
-    by_file = defaultdict(list)
-    for g in games:
-        by_file[(g["year"], g["league"])].append(g)
-
-    index = []
-    for (year, league), gs in sorted(by_file.items(), key=lambda kv: (kv[0][0] or 0, kv[0][1] or "")):
-        gs.sort(key=lambda g: (g["date"] or "", g["gameInSeries"] or 0, g["id"]))
-        rel = f"{year}/{slug(league)}.json"
-        path = os.path.join(a.out, rel)
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump({"source": "Oracle's Elixir (oracleselixir.com)", "league": league,
-                       "year": year, "games": gs}, f, ensure_ascii=False, separators=(",", ":"))
-        index.append({"league": league, "year": year, "tier": gs[0]["tier"], "file": rel,
-                      "games": len(gs), "series": len({g["seriesId"] for g in gs}),
-                      "firstDate": gs[0]["date"], "lastDate": gs[-1]["date"],
-                      "maxGameInSeries": max(g["gameInSeries"] or 0 for g in gs),
-                      "patches": dict(sorted(Counter(g["patchLabel"] for g in gs if g["patchLabel"]).items(),
-                                             key=lambda kv: patch_key(kv[0])))})
-    os.makedirs(a.out, exist_ok=True)
-    # Danh sách phiên bản: số game, ngày đầu/cuối (dùng cho bộ lọc và trọng số theo độ mới)
-    pv = {}
-    for g in games:
-        lb = g["patchLabel"]
-        if not lb:
-            continue
-        e = pv.setdefault(lb, {"patch": lb, "internal": g["patch"], "games": 0, "tier1Games": 0,
-                               "firstDate": g["date"], "lastDate": g["date"]})
-        e["games"] += 1
-        e["tier1Games"] += g["tier"] == "1"
-        e["firstDate"] = min(e["firstDate"], g["date"])
-        e["lastDate"] = max(e["lastDate"], g["date"])
-    patches = sorted(pv.values(), key=lambda e: patch_key(e["patch"]), reverse=True)
-    with open(os.path.join(a.out, "index.json"), "w", encoding="utf-8") as f:
-        json.dump({"source": "Oracle's Elixir (oracleselixir.com)", "patches": patches,
-                   "leagues": index}, f, ensure_ascii=False, indent=1)
+    for (year, league), gs in group_by_file(games).items():
+        write_league_file(a.out, year, league, gs)
+    index, patches = write_index(a.out, games)
 
     # ---- Báo cáo kiểm tra ----
     print(f"\n{len(games)} game, {len(index)} giải. Ghi vào {a.out}/", file=sys.stderr)

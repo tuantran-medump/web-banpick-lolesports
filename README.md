@@ -6,12 +6,15 @@ Web mô phỏng ban/pick cho LoL chuyên nghiệp (có Fearless), gợi ý ban/p
 
 Nguồn: [Oracle's Elixir](https://oracleselixir.com) (file CSV theo năm). Nhớ ghi nguồn trên web.
 
-Workflow `.github/workflows/update-data.yml` thử 3 tiếng một lần, mỗi ngày cập nhật một lần (Google hay giới hạn lượt tải file của Oracle's Elixir, nên cần thử nhiều lần). Chỉ báo lỗi khi đã hơn 2 ngày không tải được.
+Workflow `.github/workflows/update-data.yml` thử 3 tiếng một lần, mỗi ngày cập nhật một lần (Google hay giới hạn lượt tải file của Oracle's Elixir, nên cần thử nhiều lần). Chỉ báo lỗi khi đã hơn 2 ngày không cập nhật được từ cả hai nguồn.
 
 1. `scripts/oe_download.py` tải CSV của năm trước và năm nay từ thư mục Google Drive của Oracle's Elixir.
 2. `scripts/oe_convert.py` chuyển CSV thành JSON trong `public/data/`:
    - `public/data/index.json`: danh sách giải (tier, số game, số series, các phiên bản) và danh sách phiên bản.
    - `public/data/<năm>/<giải>.json`: từng game với ban/pick, thứ tự draft 20 lượt, series và danh sách tướng đã dùng (Fearless).
+   Nếu không tải được (Google báo "Quota exceeded"), `scripts/lp_fallback.py` lấy các game mới hơn ngày cuối cùng đang có
+   từ [Leaguepedia](https://lol.fandom.com) (Cargo API, giấy phép CC BY-SA) và ghi thêm vào cùng file, đánh dấu `"source": "leaguepedia"`.
+   Lần sau tải được Oracle's Elixir thì toàn bộ dữ liệu được tạo lại từ CSV.
 3. `scripts/oe_check.py` chặn ghi đè nếu số game của một năm giảm quá 10% (file tải về bị lỗi).
 4. Ghi `public/data/meta.json` (ngày cập nhật) và commit vào `main`.
 

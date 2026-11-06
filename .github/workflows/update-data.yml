@@ -1,4 +1,4 @@
-name: Cập nhật dữ liệu Oracle's Elixir
+name: Cập nhật dữ liệu
 
 on:
   schedule:
@@ -71,21 +71,45 @@ jobs:
           OE_FILE_IDS: ${{ vars.OE_FILE_IDS }}
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
           YEARS: ${{ steps.years.outputs.years }}
-          LAST: ${{ steps.today.outputs.last }}
         run: |
           python scripts/oe_download.py $YEARS --dir raw --optional
           if ls raw/*.csv > /dev/null 2>&1; then
             ls -l raw
             echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Không tải được CSV của Oracle's Elixir (Google giới hạn lượt tải), dùng Leaguepedia dự phòng."
+          fi
+
+      - name: Dự phòng Leaguepedia
+        if: steps.today.outputs.skip != 'true' && steps.download.outputs.ok != 'true'
+        id: lp
+        env:
+          LAST: ${{ steps.today.outputs.last }}
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            args="--out build/lp-test"   # PR: chỉ chạy thử, không đụng public/data
+          else
+            args=""
+          fi
+          if python scripts/lp_fallback.py --data public/data $args 2> lp-report.txt; then
+            cat lp-report.txt
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+            {
+              echo '## Leaguepedia (dự phòng)'
+              echo '```'
+              cat lp-report.txt
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
-          # Lần chạy theo lịch: chỉ báo lỗi khi đã hơn 2 ngày không tải được, tránh báo lỗi 8 lần/ngày
+          cat lp-report.txt
+          # Theo lịch: chỉ báo lỗi khi đã hơn 2 ngày không cập nhật được, tránh báo lỗi 8 lần/ngày
           if [ "${{ github.event_name }}" = "schedule" ] && [ -n "$LAST" ] \
              && [ "$LAST" \> "$(date -u -d '2 days ago' +%Y-%m-%d)" ]; then
-            echo "::warning::Chưa tải được (Google giới hạn lượt tải), sẽ thử lại lần sau."
+            echo "::warning::Leaguepedia cũng lỗi, sẽ thử lại lần sau."
             exit 0
           fi
-          echo "::error::Không tải được file CSV nào"
+          echo "::error::Không lấy được dữ liệu từ cả Oracle's Elixir và Leaguepedia"
           exit 1
 
       - name: Chuyển CSV sang JSON
@@ -107,7 +131,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Commit dữ liệu mới
-        if: github.event_name != 'pull_request' && steps.download.outputs.ok == 'true'
+        if: github.event_name != 'pull_request' && (steps.download.outputs.ok == 'true' || steps.lp.outputs.ok == 'true')
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -116,7 +140,8 @@ jobs:
             echo "Dữ liệu không đổi, không commit."
             exit 0
           fi
-          git commit -m "data: cập nhật Oracle's Elixir $(date -u +%Y-%m-%d)"
+          if [ "${{ steps.download.outputs.ok }}" = "true" ]; then src="Oracle's Elixir"; else src="Leaguepedia (dự phòng)"; fi
+          git commit -m "data: cập nhật từ $src $(date -u +%Y-%m-%d)"
           for i in 1 2 3 4; do
             git push && exit 0
             sleep $((2 ** i))
