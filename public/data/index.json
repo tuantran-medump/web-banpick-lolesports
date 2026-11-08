@@ -2,12 +2,20 @@
  "source": "Oracle's Elixir (oracleselixir.com)",
  "patches": [
   {
+   "patch": "26.22",
+   "internal": "16.22",
+   "games": 5,
+   "tier1Games": 0,
+   "firstDate": "2026-11-06 16:31:00",
+   "lastDate": "2026-11-06 18:10:40"
+  },
+  {
    "patch": "26.20",
    "internal": "16.20",
-   "games": 272,
-   "tier1Games": 83,
+   "games": 285,
+   "tier1Games": 87,
    "firstDate": "2026-10-09 16:06:57",
-   "lastDate": "2026-11-06 00:00:31"
+   "lastDate": "2026-11-07 12:26:30"
   },
   {
    "patch": "26.18",
@@ -1594,11 +1602,11 @@
    "year": 2026,
    "tier": "2",
    "file": "2026/HLL.json",
-   "games": 243,
-   "series": 103,
+   "games": 248,
+   "series": 105,
    "leaguepediaGames": 0,
    "firstDate": "2025-07-29 15:10:01",
-   "lastDate": "2026-09-12 19:07:32",
+   "lastDate": "2026-11-06 18:10:40",
    "maxGameInSeries": 5,
    "patches": {
     "25.13": 8,
@@ -1614,7 +1622,8 @@
     "26.14": 18,
     "26.15": 8,
     "26.16": 5,
-    "26.17": 23
+    "26.17": 23,
+    "26.22": 5
    }
   },
   {
@@ -1682,11 +1691,11 @@
    "year": 2026,
    "tier": "2",
    "file": "2026/LAS.json",
-   "games": 558,
-   "series": 231,
+   "games": 567,
+   "series": 233,
    "leaguepediaGames": 0,
    "firstDate": "2026-03-21 05:05:02",
-   "lastDate": "2026-11-01 11:42:53",
+   "lastDate": "2026-11-07 12:26:30",
    "maxGameInSeries": 5,
    "patches": {
     "26.05": 33,
@@ -1696,7 +1705,7 @@
     "26.09": 30,
     "26.17": 46,
     "26.18": 140,
-    "26.20": 143
+    "26.20": 152
    }
   },
   {
@@ -2332,15 +2341,15 @@
    "year": 2026,
    "tier": "1",
    "file": "2026/WLDs.json",
-   "games": 95,
-   "series": 50,
+   "games": 99,
+   "series": 52,
    "leaguepediaGames": 0,
    "firstDate": "2026-09-17 09:11:42",
-   "lastDate": "2026-11-06 00:00:31",
+   "lastDate": "2026-11-07 01:06:38",
    "maxGameInSeries": 5,
    "patches": {
     "26.17": 12,
-    "26.20": 83
+    "26.20": 87
    }
   },
   {
