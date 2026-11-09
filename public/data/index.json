@@ -12,10 +12,10 @@
   {
    "patch": "26.20",
    "internal": "16.20",
-   "games": 285,
-   "tier1Games": 87,
+   "games": 297,
+   "tier1Games": 90,
    "firstDate": "2026-10-09 16:06:57",
-   "lastDate": "2026-11-07 12:26:30"
+   "lastDate": "2026-11-08 12:12:38"
   },
   {
    "patch": "26.18",
@@ -1691,11 +1691,11 @@
    "year": 2026,
    "tier": "2",
    "file": "2026/LAS.json",
-   "games": 567,
-   "series": 233,
+   "games": 576,
+   "series": 235,
    "leaguepediaGames": 0,
    "firstDate": "2026-03-21 05:05:02",
-   "lastDate": "2026-11-07 12:26:30",
+   "lastDate": "2026-11-08 12:12:38",
    "maxGameInSeries": 5,
    "patches": {
     "26.05": 33,
@@ -1705,7 +1705,7 @@
     "26.09": 30,
     "26.17": 46,
     "26.18": 140,
-    "26.20": 152
+    "26.20": 161
    }
   },
   {
@@ -2341,15 +2341,15 @@
    "year": 2026,
    "tier": "1",
    "file": "2026/WLDs.json",
-   "games": 99,
-   "series": 52,
+   "games": 102,
+   "series": 54,
    "leaguepediaGames": 0,
    "firstDate": "2026-09-17 09:11:42",
-   "lastDate": "2026-11-07 01:06:38",
+   "lastDate": "2026-11-08 00:00:51",
    "maxGameInSeries": 5,
    "patches": {
     "26.17": 12,
-    "26.20": 87
+    "26.20": 90
    }
   },
   {
