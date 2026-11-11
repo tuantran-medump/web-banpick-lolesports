@@ -4,10 +4,10 @@
   {
    "patch": "26.22",
    "internal": "16.22",
-   "games": 5,
+   "games": 8,
    "tier1Games": 0,
    "firstDate": "2026-11-06 16:31:00",
-   "lastDate": "2026-11-06 18:10:40"
+   "lastDate": "2026-11-10 09:49:05"
   },
   {
    "patch": "26.20",
@@ -2411,6 +2411,21 @@
    "maxGameInSeries": 5,
    "patches": {
     "26.17": 5
+   }
+  },
+  {
+   "league": "LCP",
+   "year": 2027,
+   "tier": "1.5",
+   "file": "2027/LCP.json",
+   "games": 3,
+   "series": 1,
+   "leaguepediaGames": 0,
+   "firstDate": "2026-11-10 08:00:50",
+   "lastDate": "2026-11-10 09:49:05",
+   "maxGameInSeries": 3,
+   "patches": {
+    "26.22": 3
    }
   },
   {
