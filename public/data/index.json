@@ -4,10 +4,10 @@
   {
    "patch": "26.22",
    "internal": "16.22",
-   "games": 11,
+   "games": 16,
    "tier1Games": 0,
    "firstDate": "2026-11-06 16:31:00",
-   "lastDate": "2026-11-10 09:49:05"
+   "lastDate": "2026-11-12 17:11:38"
   },
   {
    "patch": "26.20",
@@ -1602,11 +1602,11 @@
    "year": 2026,
    "tier": "2",
    "file": "2026/HLL.json",
-   "games": 248,
-   "series": 105,
+   "games": 250,
+   "series": 106,
    "leaguepediaGames": 0,
    "firstDate": "2025-07-29 15:10:01",
-   "lastDate": "2026-11-06 18:10:40",
+   "lastDate": "2026-11-12 17:11:38",
    "maxGameInSeries": 5,
    "patches": {
     "25.13": 8,
@@ -1623,7 +1623,7 @@
     "26.15": 8,
     "26.16": 5,
     "26.17": 23,
-    "26.22": 5
+    "26.22": 7
    }
   },
   {
@@ -2418,14 +2418,14 @@
    "year": 2027,
    "tier": "1.5",
    "file": "2027/LCP.json",
-   "games": 6,
-   "series": 2,
+   "games": 9,
+   "series": 3,
    "leaguepediaGames": 0,
    "firstDate": "2026-11-10 05:12:28",
-   "lastDate": "2026-11-10 09:49:05",
+   "lastDate": "2026-11-12 07:55:34",
    "maxGameInSeries": 3,
    "patches": {
-    "26.22": 6
+    "26.22": 9
    }
   },
   {
