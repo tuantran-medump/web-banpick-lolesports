@@ -12,10 +12,10 @@
   {
    "patch": "26.20",
    "internal": "16.20",
-   "games": 301,
-   "tier1Games": 94,
+   "games": 305,
+   "tier1Games": 98,
    "firstDate": "2026-10-09 16:06:57",
-   "lastDate": "2026-11-09 00:56:00"
+   "lastDate": "2026-11-14 23:18:11"
   },
   {
    "patch": "26.18",
@@ -2341,15 +2341,15 @@
    "year": 2026,
    "tier": "1",
    "file": "2026/WLDs.json",
-   "games": 106,
-   "series": 56,
+   "games": 110,
+   "series": 57,
    "leaguepediaGames": 0,
    "firstDate": "2026-09-17 09:11:42",
-   "lastDate": "2026-11-09 00:56:00",
+   "lastDate": "2026-11-14 23:18:11",
    "maxGameInSeries": 5,
    "patches": {
     "26.17": 12,
-    "26.20": 94
+    "26.20": 98
    }
   },
   {
