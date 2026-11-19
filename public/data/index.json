@@ -12,10 +12,10 @@
   {
    "patch": "26.20",
    "internal": "16.20",
-   "games": 307,
+   "games": 309,
    "tier1Games": 98,
    "firstDate": "2026-10-09 16:06:57",
-   "lastDate": "2026-11-17 17:50:42"
+   "lastDate": "2026-11-17 19:42:11"
   },
   {
    "patch": "26.18",
@@ -2388,14 +2388,14 @@
    "year": 2027,
    "tier": "2",
    "file": "2027/AL.json",
-   "games": 2,
-   "series": 1,
+   "games": 4,
+   "series": 2,
    "leaguepediaGames": 0,
    "firstDate": "2026-11-17 17:00:33",
-   "lastDate": "2026-11-17 17:50:42",
+   "lastDate": "2026-11-17 19:42:11",
    "maxGameInSeries": 2,
    "patches": {
-    "26.20": 2
+    "26.20": 4
    }
   },
   {
