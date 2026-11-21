@@ -4,10 +4,10 @@
   {
    "patch": "26.22",
    "internal": "16.22",
-   "games": 32,
+   "games": 40,
    "tier1Games": 0,
    "firstDate": "2026-11-06 16:31:00",
-   "lastDate": "2026-11-15 17:16:39"
+   "lastDate": "2026-11-17 17:55:00"
   },
   {
    "patch": "26.20",
@@ -1574,6 +1574,21 @@
    "maxGameInSeries": 5,
    "patches": {
     "26.05": 45
+   }
+  },
+  {
+   "league": "GG Arena by Teknosa",
+   "year": 2026,
+   "tier": "2",
+   "file": "2026/GG_Arena_by_Teknosa.json",
+   "games": 8,
+   "series": 4,
+   "leaguepediaGames": 8,
+   "firstDate": "2026-11-16 14:31:00",
+   "lastDate": "2026-11-17 17:55:00",
+   "maxGameInSeries": 2,
+   "patches": {
+    "26.22": 8
    }
   },
   {
