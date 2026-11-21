@@ -4,10 +4,10 @@
   {
    "patch": "26.23",
    "internal": "16.23",
-   "games": 8,
+   "games": 13,
    "tier1Games": 0,
    "firstDate": "2026-11-20 17:13:00",
-   "lastDate": "2026-11-21 13:23:00"
+   "lastDate": "2026-11-21 19:56:00"
   },
   {
    "patch": "26.22",
@@ -2241,6 +2241,21 @@
     "26.15": 30,
     "26.16": 20,
     "26.17": 23
+   }
+  },
+  {
+   "league": "Nova Series",
+   "year": 2026,
+   "tier": "2",
+   "file": "2026/Nova_Series.json",
+   "games": 5,
+   "series": 2,
+   "leaguepediaGames": 5,
+   "firstDate": "2026-11-21 16:06:00",
+   "lastDate": "2026-11-21 19:56:00",
+   "maxGameInSeries": 3,
+   "patches": {
+    "26.23": 5
    }
   },
   {
