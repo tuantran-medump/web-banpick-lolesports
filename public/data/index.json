@@ -2,6 +2,14 @@
  "source": "Oracle's Elixir (oracleselixir.com)",
  "patches": [
   {
+   "patch": "26.23",
+   "internal": "16.23",
+   "games": 5,
+   "tier1Games": 0,
+   "firstDate": "2026-11-20 17:13:00",
+   "lastDate": "2026-11-20 20:34:00"
+  },
+  {
    "patch": "26.22",
    "internal": "16.22",
    "games": 40,
@@ -1407,6 +1415,21 @@
    "maxGameInSeries": 5,
    "patches": {
     "26.11": 63
+   }
+  },
+  {
+   "league": "Breeze of Glory",
+   "year": 2026,
+   "tier": "2",
+   "file": "2026/Breeze_of_Glory.json",
+   "games": 5,
+   "series": 1,
+   "leaguepediaGames": 5,
+   "firstDate": "2026-11-20 17:13:00",
+   "lastDate": "2026-11-20 20:34:00",
+   "maxGameInSeries": 5,
+   "patches": {
+    "26.23": 5
    }
   },
   {
