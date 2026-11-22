@@ -2,20 +2,12 @@
  "source": "Oracle's Elixir (oracleselixir.com)",
  "patches": [
   {
-   "patch": "26.23",
-   "internal": "16.23",
-   "games": 13,
-   "tier1Games": 0,
-   "firstDate": "2026-11-20 17:13:00",
-   "lastDate": "2026-11-21 19:56:00"
-  },
-  {
    "patch": "26.22",
    "internal": "16.22",
-   "games": 40,
+   "games": 32,
    "tier1Games": 0,
    "firstDate": "2026-11-06 16:31:00",
-   "lastDate": "2026-11-17 17:55:00"
+   "lastDate": "2026-11-15 17:16:39"
   },
   {
    "patch": "26.20",
@@ -23,7 +15,7 @@
    "games": 320,
    "tier1Games": 98,
    "firstDate": "2026-10-09 16:06:57",
-   "lastDate": "2026-11-20 18:41:00"
+   "lastDate": "2026-11-20 18:40:57"
   },
   {
    "patch": "26.18",
@@ -1418,21 +1410,6 @@
    }
   },
   {
-   "league": "Breeze of Glory",
-   "year": 2026,
-   "tier": "2",
-   "file": "2026/Breeze_of_Glory.json",
-   "games": 5,
-   "series": 1,
-   "leaguepediaGames": 5,
-   "firstDate": "2026-11-20 17:13:00",
-   "lastDate": "2026-11-20 20:34:00",
-   "maxGameInSeries": 5,
-   "patches": {
-    "26.23": 5
-   }
-  },
-  {
    "league": "CBLOL",
    "year": 2026,
    "tier": "1.5",
@@ -1585,21 +1562,6 @@
    }
   },
   {
-   "league": "Esports Series Madrid",
-   "year": 2026,
-   "tier": "2",
-   "file": "2026/Esports_Series_Madrid.json",
-   "games": 3,
-   "series": 1,
-   "leaguepediaGames": 3,
-   "firstDate": "2026-11-21 11:28:00",
-   "lastDate": "2026-11-21 13:23:00",
-   "maxGameInSeries": 3,
-   "patches": {
-    "26.23": 3
-   }
-  },
-  {
    "league": "FST",
    "year": 2026,
    "tier": "1",
@@ -1612,21 +1574,6 @@
    "maxGameInSeries": 5,
    "patches": {
     "26.05": 45
-   }
-  },
-  {
-   "league": "GG Arena by Teknosa",
-   "year": 2026,
-   "tier": "2",
-   "file": "2026/GG_Arena_by_Teknosa.json",
-   "games": 8,
-   "series": 4,
-   "leaguepediaGames": 8,
-   "firstDate": "2026-11-16 14:31:00",
-   "lastDate": "2026-11-17 17:55:00",
-   "maxGameInSeries": 2,
-   "patches": {
-    "26.22": 8
    }
   },
   {
@@ -2244,21 +2191,6 @@
    }
   },
   {
-   "league": "Nova Series",
-   "year": 2026,
-   "tier": "2",
-   "file": "2026/Nova_Series.json",
-   "games": 5,
-   "series": 2,
-   "leaguepediaGames": 5,
-   "firstDate": "2026-11-21 16:06:00",
-   "lastDate": "2026-11-21 19:56:00",
-   "maxGameInSeries": 3,
-   "patches": {
-    "26.23": 5
-   }
-  },
-  {
    "league": "PCS",
    "year": 2026,
    "tier": "2",
@@ -2458,9 +2390,9 @@
    "file": "2027/AL.json",
    "games": 15,
    "series": 5,
-   "leaguepediaGames": 4,
+   "leaguepediaGames": 0,
    "firstDate": "2026-11-17 17:00:33",
-   "lastDate": "2026-11-20 18:41:00",
+   "lastDate": "2026-11-20 18:40:57",
    "maxGameInSeries": 4,
    "patches": {
     "26.20": 15

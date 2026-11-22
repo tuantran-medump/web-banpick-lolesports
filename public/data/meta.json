@@ -1,13 +1,8 @@
 {
  "source": "Oracle's Elixir (oracleselixir.com)",
- "updated": "2026-11-20",
+ "updated": "2026-11-22",
  "files": {
   "2025_LoL_esports_match_data_from_OraclesElixir.csv": 79186324,
-  "2026_LoL_esports_match_data_from_OraclesElixir.csv": 79777131
- },
- "leaguepedia": {
-  "fetched": "2026-11-21",
-  "since": "2026-11-16 00:00:00",
-  "games": 25
+  "2026_LoL_esports_match_data_from_OraclesElixir.csv": 79809678
  }
 }
