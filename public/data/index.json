@@ -2,6 +2,14 @@
  "source": "Oracle's Elixir (oracleselixir.com)",
  "patches": [
   {
+   "patch": "26.23",
+   "internal": "16.23",
+   "games": 4,
+   "tier1Games": 0,
+   "firstDate": "2026-11-21 16:10:20",
+   "lastDate": "2026-11-21 17:02:48"
+  },
+  {
    "patch": "26.22",
    "internal": "16.22",
    "games": 32,
@@ -1602,11 +1610,11 @@
    "year": 2026,
    "tier": "2",
    "file": "2026/HLL.json",
-   "games": 257,
-   "series": 109,
+   "games": 261,
+   "series": 111,
    "leaguepediaGames": 0,
    "firstDate": "2025-07-29 15:10:01",
-   "lastDate": "2026-11-15 17:16:39",
+   "lastDate": "2026-11-21 17:02:48",
    "maxGameInSeries": 5,
    "patches": {
     "25.13": 8,
@@ -1623,7 +1631,8 @@
     "26.15": 8,
     "26.16": 5,
     "26.17": 23,
-    "26.22": 14
+    "26.22": 14,
+    "26.23": 4
    }
   },
   {
