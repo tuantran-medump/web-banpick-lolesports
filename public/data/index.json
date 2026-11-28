@@ -4,10 +4,10 @@
   {
    "patch": "26.23",
    "internal": "16.23",
-   "games": 37,
+   "games": 43,
    "tier1Games": 0,
    "firstDate": "2026-11-19 15:11:00",
-   "lastDate": "2026-11-27 18:37:00"
+   "lastDate": "2026-11-27 20:36:00"
   },
   {
    "patch": "26.22",
@@ -2355,6 +2355,21 @@
     "26.15": 19,
     "26.16": 21,
     "26.17": 23
+   }
+  },
+  {
+   "league": "Streamers Clash",
+   "year": 2026,
+   "tier": "2",
+   "file": "2026/Streamers_Clash.json",
+   "games": 6,
+   "series": 6,
+   "leaguepediaGames": 6,
+   "firstDate": "2026-11-27 16:09:00",
+   "lastDate": "2026-11-27 20:36:00",
+   "maxGameInSeries": 1,
+   "patches": {
+    "26.23": 6
    }
   },
   {
