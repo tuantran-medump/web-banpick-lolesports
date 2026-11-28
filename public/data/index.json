@@ -4,10 +4,10 @@
   {
    "patch": "26.23",
    "internal": "16.23",
-   "games": 34,
+   "games": 37,
    "tier1Games": 0,
    "firstDate": "2026-11-19 15:11:00",
-   "lastDate": "2026-11-24 20:39:00"
+   "lastDate": "2026-11-27 18:37:00"
   },
   {
    "patch": "26.22",
@@ -2608,14 +2608,14 @@
    "year": 2027,
    "tier": "2",
    "file": "2027/Prime_League_1st_Division.json",
-   "games": 9,
-   "series": 2,
-   "leaguepediaGames": 9,
+   "games": 12,
+   "series": 3,
+   "leaguepediaGames": 12,
    "firstDate": "2026-11-24 17:08:00",
-   "lastDate": "2026-11-24 20:39:00",
+   "lastDate": "2026-11-27 18:37:00",
    "maxGameInSeries": 5,
    "patches": {
-    "26.23": 9
+    "26.23": 12
    }
   },
   {
